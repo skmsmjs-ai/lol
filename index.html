@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090c11">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="내전 매칭기">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>내전 자동 매칭기</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">NM</div>
+        <div>
+          <p class="eyebrow">IN-HOUSE MATCH</p>
+          <h1>내전 자동 매칭기</h1>
+        </div>
+      </div>
+      <button id="installHelpBtn" class="icon-btn" aria-label="설치 안내">?</button>
+    </header>
+
+    <main>
+      <section id="tab-match" class="tab-panel active">
+        <div class="hero-card">
+          <div>
+            <span class="hero-kicker">오늘의 로비</span>
+            <strong>10명을 고르면, 역할까지 같이 맞춥니다.</strong>
+            <p>전체 체급만 반으로 자르지 않고 같은 역할의 격차와 바텀 조합까지 함께 계산합니다.</p>
+          </div>
+          <span id="selectedCounter" class="counter">0 / 10</span>
+        </div>
+
+        <section class="section-block">
+          <div class="section-head">
+            <div>
+              <h2>참가자</h2>
+              <p>오늘 플레이할 사람 10명을 선택합니다.</p>
+            </div>
+            <button id="clearSelectionBtn" class="text-btn">초기화</button>
+          </div>
+          <div id="participantGrid" class="participant-grid"></div>
+        </section>
+
+        <section class="section-block lock-section">
+          <div class="section-head">
+            <div>
+              <h2>같은 팀 고정</h2>
+              <p>같은 PC방 등 반드시 붙어야 하는 2~5명을 묶습니다.</p>
+            </div>
+            <button id="addFixedGroupBtn" class="secondary-btn" disabled>+ 그룹</button>
+          </div>
+          <div id="fixedGroups" class="fixed-groups"></div>
+        </section>
+
+        <button id="generateBtn" class="primary-btn large" disabled>
+          <span>황금 밸런스 만들기</span><span class="arrow">→</span>
+        </button>
+
+        <section id="resultSection" class="result-section hidden">
+          <div class="section-head result-head">
+            <div>
+              <p class="eyebrow">CURRENT TIER LIST</p>
+              <h2>현재 티어리스트</h2>
+            </div>
+          </div>
+          <div id="tierListResult" class="tier-list"></div>
+
+          <div class="section-head result-head plans-head">
+            <div>
+              <p class="eyebrow">TOP MATCHES</p>
+              <h2>황금 밸런스 후보</h2>
+              <p>2·3안은 가능한 한 1안과 팀당 2명 이상 다른 구성으로 골라냅니다.</p>
+            </div>
+            <span id="planCountBadge" class="badge"></span>
+          </div>
+          <div id="plansContainer" class="plans-container"></div>
+        </section>
+      </section>
+
+      <section id="tab-roster" class="tab-panel">
+        <div class="section-head sticky-head">
+          <div>
+            <p class="eyebrow">ROSTER</p>
+            <h2>멤버 관리</h2>
+            <p>티어와 불가능 포지션을 여기서 갱신합니다.</p>
+          </div>
+          <button id="addMemberBtn" class="primary-small">+ 새 멤버</button>
+        </div>
+        <div id="tierListRoster" class="tier-list"></div>
+        <div id="rosterList" class="roster-list"></div>
+      </section>
+
+      <section id="tab-criteria" class="tab-panel">
+        <div class="criteria-hero">
+          <p class="eyebrow">BALANCE MODEL</p>
+          <h2>왜 이 팀이 공정한가</h2>
+          <p>이 매칭기는 “티어 합만 같으면 공정하다”는 가정을 쓰지 않습니다. 같은 역할끼리의 실력 차이를 줄이고, 바텀은 2인 조합으로 보며, 실제 우리 내전 결과로 역할 영향도를 천천히 보정합니다.</p>
+        </div>
+
+        <div class="principle-grid">
+          <article class="principle-card"><span>01</span><strong>전체 체급</strong><p>두 팀의 티어 합이 크게 벌어지면 기본 벌점을 줍니다.</p></article>
+          <article class="principle-card"><span>02</span><strong>역할 대칭</strong><p>TOP·JG·MID의 맞상대 격차는 제곱으로 커지고, 1티어를 넘으면 추가 벌점이 붙습니다.</p></article>
+          <article class="principle-card"><span>03</span><strong>바텀 상호보완</strong><p>ADC·SUP는 개별 차이와 함께 2인 조합 지수를 별도로 계산합니다.</p></article>
+          <article class="principle-card"><span>04</span><strong>실전 학습</strong><p>사용한 안과 A/B 승리만 기록해 우리 멤버에게 맞는 역할 영향도를 조금씩 갱신합니다.</p></article>
+        </div>
+
+        <section class="formula-card">
+          <div class="formula-title"><span>1</span><div><strong>역할군 격차 벌점</strong><p>한 라인이 크게 터지는 조합을 막는 장치입니다.</p></div></div>
+          <div class="formula">P<sub>r</sub>(d) = b<sub>r</sub>s<sub>r</sub>d² + c<sub>r</sub>·max(0, d−1)²</div>
+          <div class="formula-notes">
+            <p><b>d</b> = 같은 역할 두 선수의 티어 차이</p>
+            <p><b>b</b> = 기본 벌점, <b>c</b> = 1티어 초과 시 추가 벌점</p>
+            <p><b>s</b> = 실제 경기 결과로 천천히 바뀌는 역할 영향도 보정값</p>
+          </div>
+          <div class="rule-table">
+            <div><span>TOP</span><b>기본 11</b><small>초과 38</small></div>
+            <div><span>JG</span><b>기본 12</b><small>초과 42</small></div>
+            <div><span>MID</span><b>기본 11</b><small>초과 38</small></div>
+          </div>
+          <p class="criteria-note">정글만 초기값을 아주 조금 높게 두지만 “정글이 무조건 제일 중요하다”는 뜻은 아닙니다. Riot이 역할 숙련도 불일치, 특히 자동 선택 정글 대 주 포지션 정글을 별도로 문제로 다룬 점을 초기 prior에만 약하게 반영했습니다.</p>
+        </section>
+
+        <section class="formula-card">
+          <div class="formula-title"><span>2</span><div><strong>바텀 듀오 지수</strong><p>원딜·서폿은 서로의 약점을 어느 정도 보완할 수 있다는 가정입니다.</p></div></div>
+          <div class="formula">B = 0.60·min(ADC, SUP) + 0.40·max(ADC, SUP)</div>
+          <p class="criteria-note">티어 숫자가 낮을수록 강하므로 min은 더 잘하는 선수입니다. 예를 들어 2티어 + 6티어 바텀은 단순 평균 4.0이 아니라 3.6으로 봅니다. 다만 ADC와 SUP의 개별 격차 벌점도 따로 남겨 두므로 한 명의 강함이 모든 약점을 지워버리지는 않습니다.</p>
+        </section>
+
+        <section class="formula-card">
+          <div class="formula-title"><span>3</span><div><strong>실제 내전 학습</strong><p>친구들이 실제로 한 경기 결과만으로 보정합니다.</p></div></div>
+          <div class="formula">p(A) = sigmoid(w<sub>T</sub>x<sub>T</sub> + w<sub>J</sub>x<sub>J</sub> + w<sub>M</sub>x<sub>M</sub> + w<sub>B</sub>x<sub>B</sub>)</div>
+          <div class="criteria-flow">
+            <span>사용한 안 1·2·3</span><i>→</i><span>A/B 승리</span><i>→</i><span>가중치 소폭 갱신</span>
+          </div>
+          <p class="criteria-note">한 판에는 챔피언 조합, 컨디션, 실수 같은 변수가 많으므로 학습률을 작게 두고 초기값으로 돌아가려는 규제도 넣었습니다. 한두 판 때문에 역할 중요도가 뒤집히지 않습니다.</p>
+        </section>
+
+        <section class="card live-model-card">
+          <div class="section-head compact no-margin">
+            <div><h3>현재 우리 내전 가중치</h3><p id="criteriaGames">0경기 학습</p></div>
+            <span class="model-status" id="modelStatus">초기값 중심</span>
+          </div>
+          <div id="criteriaWeightBars" class="weight-bars"></div>
+          <p class="tiny-note">가중치가 높을수록 해당 역할 차이가 실제 승패와 더 자주 같은 방향으로 나타났다는 뜻입니다. 인과관계의 증명은 아닙니다.</p>
+        </section>
+
+        <section class="evidence-card">
+          <div class="formula-title"><span>R</span><div><strong>이 기준을 이렇게 잡은 이유</strong><p>공식 대전 검색에서 공개된 방향성과 우리 내전용 휴리스틱을 구분합니다.</p></div></div>
+          <ul class="evidence-list">
+            <li><b>Riot 2022:</b> 주 포지션은 주 포지션끼리, 부 포지션은 부 포지션끼리, 자동 선택은 자동 선택끼리 맞추는 ‘역할군 공평성’을 강화했다고 설명했습니다.</li>
+            <li><b>Riot 2024:</b> 양 팀의 자동 선택 수를 맞추고 한 팀에 불리한 포지션 교환을 제한하는 방향을 설명했습니다.</li>
+            <li><b>Riot 2026:</b> 가능하면 자동 선택된 선수를 상대 팀의 같은 포지션 자동 선택 선수와 맞추도록 개선했습니다.</li>
+          </ul>
+          <div class="source-links">
+            <a href="https://www.leagueoflegends.com/en-us/news/dev/matchmaking-and-champion-select-fall-2022/" target="_blank" rel="noopener">Riot 2022 역할군 공평성 ↗</a>
+            <a href="https://www.leagueoflegends.com/ko-kr/news/dev/dev-matchmaking-in-2024/" target="_blank" rel="noopener">Riot 2024 대전 검색 ↗</a>
+            <a href="https://www.leagueoflegends.com/ko-kr/news/dev/dev-ranked-2026/" target="_blank" rel="noopener">Riot 2026 자동 선택 공평성 ↗</a>
+          </div>
+          <div class="honesty-box"><b>중요:</b> Riot은 공식 매칭의 정확한 역할별 계수나 공식을 공개하지 않습니다. 이 앱의 숫자 11·12·38·42, 바텀 60:40 같은 값은 “공식 Riot 수치”가 아니라 내전에서 납득 가능한 출발점을 만들기 위한 투명한 휴리스틱입니다.</div>
+        </section>
+
+        <section class="friend-card">
+          <p class="eyebrow">ONE-LINE EXPLANATION</p>
+          <h3>친구들에게 이렇게 설명하면 됩니다.</h3>
+          <blockquote>“총점만 반으로 자른 게 아니라 같은 역할 실력차를 먼저 줄이고, 바텀은 둘을 묶어서 보고, 실제 우리 내전 승패가 쌓이면 역할 가중치도 조금씩 바뀌게 만든 거야.”</blockquote>
+        </section>
+      </section>
+
+      <section id="tab-history" class="tab-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">LEARNING</p>
+            <h2>학습 · 기록</h2>
+          </div>
+          <span id="gamesBadge" class="badge"></span>
+        </div>
+
+        <div class="card weights-card">
+          <h3>현재 역할 영향도</h3>
+          <p class="muted">초기값에서 출발해 실제 내전 승패로 아주 조금씩만 변합니다.</p>
+          <div id="weightBars" class="weight-bars"></div>
+        </div>
+
+        <div class="section-head compact">
+          <h3>최근 경기</h3>
+        </div>
+        <div id="historyList" class="history-list"></div>
+
+        <div class="card data-card">
+          <h3>데이터 보관</h3>
+          <p>평소에는 이 iPhone 안에 자동 저장됩니다. Safari 데이터 삭제나 기기 변경에 대비할 때만 백업하면 됩니다.</p>
+          <div class="button-row">
+            <button id="exportBtn" class="secondary-btn">백업 내보내기</button>
+            <label class="secondary-btn file-label">백업 불러오기<input id="importInput" type="file" accept="application/json,.json" hidden></label>
+          </div>
+          <button id="resetBtn" class="danger-btn">전체 데이터 초기화</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="주요 메뉴">
+      <button class="nav-btn active" data-tab="match"><span>◇</span><small>매칭</small></button>
+      <button class="nav-btn" data-tab="roster"><span>＋</span><small>멤버</small></button>
+      <button class="nav-btn" data-tab="criteria"><span>∑</span><small>기준</small></button>
+      <button class="nav-btn" data-tab="history"><span>↗</span><small>기록</small></button>
+    </nav>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <dialog id="memberDialog" class="modal">
+    <form method="dialog" id="memberForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow" id="memberDialogEyebrow">NEW PLAYER</p>
+          <h2 id="memberDialogTitle">새 멤버 추가</h2>
+        </div>
+        <button value="cancel" class="icon-btn">×</button>
+      </div>
+      <input type="hidden" id="memberId">
+      <label class="field">이름<input id="memberName" required maxlength="20" autocomplete="off"></label>
+      <label class="field">티어 점수 <small>낮을수록 강함</small><input id="memberTier" type="number" min="0" max="10" step="0.5" required></label>
+      <fieldset class="field role-field">
+        <legend>불가능한 포지션</legend>
+        <p class="field-help">체크한 역할에는 절대 배치하지 않습니다.</p>
+        <div id="memberImpossibleRoles" class="role-checks"></div>
+      </fieldset>
+      <div class="modal-actions">
+        <button value="cancel" class="secondary-btn">취소</button>
+        <button id="saveMemberBtn" value="default" class="primary-btn">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="groupDialog" class="modal">
+    <form method="dialog" id="groupForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">FIXED GROUP</p>
+          <h2>같은 팀으로 묶기</h2>
+        </div>
+        <button value="cancel" class="icon-btn">×</button>
+      </div>
+      <p class="muted">같은 PC방에 있는 사람처럼 반드시 같은 팀이어야 하는 2~5명을 선택하세요.</p>
+      <div id="groupMemberChoices" class="participant-grid compact-grid"></div>
+      <div class="modal-actions">
+        <button value="cancel" class="secondary-btn">취소</button>
+        <button id="saveGroupBtn" value="default" class="primary-btn">그룹 추가</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="resultDialog" class="modal result-modal">
+    <form method="dialog">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">MATCH RESULT</p>
+          <h2 id="resultDialogTitle">경기 결과 입력</h2>
+        </div>
+        <button value="cancel" class="icon-btn">×</button>
+      </div>
+      <p id="resultDialogText" class="muted"></p>
+      <div class="winner-grid">
+        <button id="winAButton" type="button" class="winner-btn team-a">A팀 승리</button>
+        <button id="winBButton" type="button" class="winner-btn team-b">B팀 승리</button>
+      </div>
+      <p class="tiny-note">입력은 이것으로 끝입니다. 해당 안의 역할·티어 차이는 이미 저장되어 있어 자동으로 학습합니다.</p>
+    </form>
+  </dialog>
+
+  <dialog id="installDialog" class="modal">
+    <form method="dialog">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">INSTALL</p>
+          <h2>iPhone에 앱처럼 설치</h2>
+        </div>
+        <button value="cancel" class="icon-btn">×</button>
+      </div>
+      <ol class="install-steps">
+        <li>이 페이지를 Safari에서 엽니다.</li>
+        <li>공유 버튼 → <strong>홈 화면에 추가</strong>를 누릅니다.</li>
+        <li><strong>웹 앱으로 열기</strong>를 켜고 추가합니다.</li>
+        <li>이후 홈 화면의 아이콘으로 실행합니다. 첫 접속 뒤에는 오프라인에서도 기본 기능을 사용할 수 있습니다.</li>
+      </ol>
+      <p class="tiny-note">데이터는 이 사이트 주소의 로컬 저장공간에 남습니다. 주소를 바꾸면 별도 저장공간으로 인식되므로, 호스팅 주소는 하나로 유지하는 편이 좋습니다.</p>
+    </form>
+  </dialog>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

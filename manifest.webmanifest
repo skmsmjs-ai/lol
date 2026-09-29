@@ -1,0 +1,23 @@
+{
+  "id": "./",
+  "name": "내전 자동 매칭기",
+  "short_name": "내전 매칭기",
+  "description": "LOL 5대5 내전 황금 밸런스 팀과 역할군을 자동으로 생성합니다.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090c11",
+  "theme_color": "#090c11",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
