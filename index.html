@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=6-room-ui-20261001">
+  <link rel="stylesheet" href="styles.css?v=6-readable-20261001">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -41,7 +41,7 @@
           <div class="section-head">
             <div>
               <h2>참가자</h2>
-              <p>오늘 플레이할 사람 10명을 선택합니다.</p>
+              <p>오늘 플레이할 사람 10명을 선택합니다. 티어 숫자가 낮을수록 강합니다.</p>
             </div>
             <button id="clearSelectionBtn" class="text-btn">초기화</button>
           </div>
@@ -114,7 +114,7 @@
 
         <section class="formula-card">
           <div class="formula-title"><span>1</span><div><strong>역할군 격차 벌점</strong><p>한 라인이 크게 터지는 조합을 막는 장치입니다.</p></div></div>
-          <div class="formula">P<sub>r</sub>(d) = b<sub>r</sub>s<sub>r</sub>d² + c<sub>r</sub>·max(0, d−1)²</div>
+          <div class="formula" data-formula="role-gap"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>P</mi><mi>r</mi></msub><mo stretchy="false">(</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo><msub><mi>b</mi><mi>r</mi></msub><msub><mi>s</mi><mi>r</mi></msub><msup><mi>d</mi><mn>2</mn></msup><mo>+</mo><msub><mi>c</mi><mi>r</mi></msub><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mi>d</mi><mo>−</mo><mn>1</mn><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">P_r(d)=b_r s_r d^2+c_r\max(0,d-1)^2</annotation></semantics></math></span></div></div><!-- formula-end -->
           <div class="formula-notes">
             <p><b>d</b> = 같은 역할 두 선수의 티어 차이</p>
             <p><b>b</b> = 기본 벌점, <b>c</b> = 1티어 초과 시 추가 벌점</p>
@@ -130,13 +130,14 @@
 
         <section class="formula-card">
           <div class="formula-title"><span>2</span><div><strong>바텀 듀오 지수</strong><p>원딜·서폿은 서로의 약점을 어느 정도 보완할 수 있다는 가정입니다.</p></div></div>
-          <div class="formula">B = 0.60·min(ADC, SUP) + 0.40·max(ADC, SUP)</div>
+          <div class="formula" data-formula="bot-duo"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.25em" columnalign="right left" columnspacing="0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>B</mi><mo>=</mo><mrow></mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mn>0.60</mn><mi>min</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>T</mi><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">D</mi><mi mathvariant="normal">C</mi></mrow></msub><mo separator="true">,</mo><msub><mi>T</mi><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">U</mi><mi mathvariant="normal">P</mi></mrow></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>+</mo><mn>0.40</mn><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>T</mi><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">D</mi><mi mathvariant="normal">C</mi></mrow></msub><mo separator="true">,</mo><msub><mi>T</mi><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">U</mi><mi mathvariant="normal">P</mi></mrow></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned}B={}&amp;0.60\min(T_{\mathrm{ADC}},T_{\mathrm{SUP}})\\&amp;+0.40\max(T_{\mathrm{ADC}},T_{\mathrm{SUP}})\end{aligned}</annotation></semantics></math></span></div></div><!-- formula-end -->
           <p class="criteria-note">티어 숫자가 낮을수록 강하므로 min은 더 잘하는 선수입니다. 예를 들어 2티어 + 6티어 바텀은 단순 평균 4.0이 아니라 3.6으로 봅니다. 다만 ADC와 SUP의 개별 격차 벌점도 따로 남겨 두므로 한 명의 강함이 모든 약점을 지워버리지는 않습니다.</p>
         </section>
 
         <section class="formula-card">
           <div class="formula-title"><span>3</span><div><strong>다섯 입력으로 같은 포지션 비교</strong><p>레벨·K/D/A·CS·게임 시간·획득 골드만 사용합니다.</p></div></div>
-          <div class="formula">성장 = 골드/분·CS/분·레벨 비교의 묶음<br>킬 관여 = (K+A) / 팀 전체 킬<br>KDA 효율 = log(1 + (K+A)/max(1,D))</div>
+          <div class="formula" data-formula="role-stats"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>G</mi><mi>r</mi></msub><mo>=</mo><msub><mi>α</mi><mi>r</mi></msub><msub><mi>z</mi><mi>g</mi></msub><mo>+</mo><msub><mi>β</mi><mi>r</mi></msub><msub><mi>z</mi><mi>c</mi></msub><mo>+</mo><msub><mi>γ</mi><mi>r</mi></msub><msub><mi>z</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">G_r=\alpha_r z_g+\beta_r z_c+\gamma_r z_\ell</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow><mi mathvariant="normal">K</mi><mi mathvariant="normal">P</mi></mrow><mo>=</mo><mfrac><mrow><mi>K</mi><mo>+</mo><mi>A</mi></mrow><msub><mi>K</mi><mtext>팀</mtext></msub></mfrac></mrow><annotation encoding="application/x-tex">\mathrm{KP}=\frac{K+A}{K_{\text{팀}}}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>E</mi><mo>=</mo><mi>ln</mi><mo>⁡</mo><mtext> ⁣</mtext><mrow><mo fence="true">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mi>K</mi><mo>+</mo><mi>A</mi></mrow><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mi>D</mi><mo stretchy="false">)</mo></mrow></mfrac><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">E=\ln\!\left(1+\frac{K+A}{\max(1,D)}\right)</annotation></semantics></math></span></div></div><!-- formula-end -->
+          <p class="criteria-note">G는 성장 비교값입니다. z의 아래첨자 g·c·ℓ은 골드/분·CS/분·레벨의 상대 비교값이고, α·β·γ는 포지션별 비중입니다. KP는 킬 관여율, E는 KDA 효율, K·D·A는 킬·데스·어시스트입니다. 팀 전체 킬이 0이면 KP는 미확인입니다.</p>
           <p class="criteria-note">같은 경기의 같은 포지션 상대와 비교합니다. 서로 연관된 골드·CS·레벨은 성장 한 묶음 안에 넣어 중복 반영을 제한합니다. 게임 시간은 분당 수치와 짧은 경기의 보정 축소에 사용합니다.</p>
           <table class="role-rules-table"><caption>포지션별 수치상 ‘잘함’의 정의와 초기 비중</caption><thead><tr><th>포지션</th><th>기준</th><th>성장</th><th>킬 관여</th><th>KDA</th></tr></thead><tbody>
             <tr><th>탑</th><td>성장 유지와 교전 기여</td><td>60%</td><td>15%</td><td>25%</td></tr>
@@ -151,14 +152,14 @@
 
         <section class="formula-card">
           <div class="formula-title"><span>4</span><div><strong>실제 내전 학습</strong><p>팀 승패와 포지션 성과를 서로 다른 통로로 학습합니다.</p></div></div>
-          <div class="formula">p(A) = sigmoid(w<sub>T</sub>x<sub>T</sub> + w<sub>J</sub>x<sub>J</sub> + w<sub>M</sub>x<sub>M</sub> + w<sub>B</sub>x<sub>B</sub>)</div>
+          <div class="formula" data-formula="win-probability"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mo>=</mo><msub><mi>w</mi><mi>T</mi></msub><msub><mi>x</mi><mi>T</mi></msub><mo>+</mo><msub><mi>w</mi><mi>J</mi></msub><msub><mi>x</mi><mi>J</mi></msub><mo>+</mo><msub><mi>w</mi><mi>M</mi></msub><msub><mi>x</mi><mi>M</mi></msub><mo>+</mo><msub><mi>w</mi><mi>B</mi></msub><msub><mi>x</mi><mi>B</mi></msub></mrow><annotation encoding="application/x-tex">z=w_Tx_T+w_Jx_J+w_Mx_M+w_Bx_B</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>p</mi><mo stretchy="false">(</mo><mi>A</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>z</mi></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">p(A)=\frac{1}{1+e^{-z}}</annotation></semantics></math></span></div></div><!-- formula-end -->
           <div class="criteria-flow"><span>A/B 승리</span><i>→</i><span>전체 실력 보정</span><i>+</i><span>수기 경기 수치</span><i>→</i><span>역할별 실력 보정</span></div>
           <p class="criteria-note">한두 판 때문에 추정치가 급변하지 않도록 경기 수가 늘수록 변화폭을 줄입니다. 수치상 비교의 반영 강도는 포지션에 따라 25~45% 이하입니다. 20분 미만 경기는 더 약하게 반영하고, 해당 포지션 보정을 제외할 수 있습니다.</p>
         </section>
 
         <section class="formula-card">
           <div class="formula-title"><span>5</span><div><strong>선수 티어 자동 보정</strong><p>사람이 정한 기준 티어는 보존하고, 실제 경기에서 별도의 추정값만 움직입니다.</p></div></div>
-          <div class="formula">T<sub>추정</sub> = T<sub>기준</sub> − R<sub>전체</sub><br>T<sub>역할</sub> = T<sub>추정</sub> − R<sub>역할</sub></div>
+          <div class="formula" data-formula="tier-correction"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mtext>추정</mtext></msub><mo>=</mo><msub><mi>T</mi><mtext>기준</mtext></msub><mo>−</mo><msub><mi>R</mi><mtext>전체</mtext></msub></mrow><annotation encoding="application/x-tex">T_{\text{추정}}=T_{\text{기준}}-R_{\text{전체}}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mtext>역할</mtext></msub><mo>=</mo><msub><mi>T</mi><mtext>추정</mtext></msub><mo>−</mo><msub><mi>R</mi><mtext>역할</mtext></msub></mrow><annotation encoding="application/x-tex">T_{\text{역할}}=T_{\text{추정}}-R_{\text{역할}}</annotation></semantics></math></span></div></div><!-- formula-end -->
           <p class="criteria-note">숫자가 낮을수록 강합니다. 팀 승패는 전체 보정값에, 같은 역할의 수치상 비교는 역할별 보정값에 반영합니다. 예를 들어 기준 3티어 선수가 미드에서 반복해서 더 높은 티어 선수를 앞서면 ‘전체 추정 2.8 / MID 역할 추정 2.5’처럼 변할 수 있습니다. 기준 티어 자체는 사용자가 수정하기 전까지 바뀌지 않습니다.</p>
         </section>
 
@@ -366,6 +367,6 @@
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=6-room-ui-20261001"></script>
+  <script type="module" src="app.js?v=6-readable-20261001"></script>
 </body>
 </html>

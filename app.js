@@ -1,5 +1,5 @@
-import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js?v=6-room-ui-20261001';
-import { SharedStore, mergeDocuments } from './shared-store.js?v=6-room-ui-20261001';
+import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js?v=6-readable-20261001';
+import { SharedStore, mergeDocuments } from './shared-store.js?v=6-readable-20261001';
 (() => {
   const PRIOR = [1.00,1.08,1.00,0.95]; // TOP, JG, MID, BOT
   const STORAGE_KEY = "naejun_matchmaker_web_v1"; // v2와 동일: 기존 데이터 이어받기
@@ -188,12 +188,15 @@ import { SharedStore, mergeDocuments } from './shared-store.js?v=6-room-ui-20261
   function renderParticipantGrid(){
     const sel=new Set(state.session.selectedIds);
     const sorted=[...state.roster].sort((a,b)=>estimatedTier(a)-estimatedTier(b)||a.name.localeCompare(b.name,"ko"));
-    $("#participantGrid").innerHTML=sorted.map(p=>`<button class="participant-card ${sel.has(p.id)?"selected":""}" data-id="${p.id}"><span class="check">✓</span><strong>${escapeHtml(p.name)}</strong><small>추정 ${fmt(estimatedTier(p))} · 기준 ${fmt(p.baseTier)} · ${escapeHtml(possibleText(p))}</small></button>`).join("");
+    $("#participantGrid").innerHTML=sorted.map(p=>`<button class="participant-card ${sel.has(p.id)?"selected":""}" data-id="${p.id}" aria-pressed="${sel.has(p.id)}"><span class="check" aria-hidden="true">✓</span><strong>${escapeHtml(p.name)}</strong>${tierFacts(p)}<span class="position-label">가능 포지션</span>${positionChips(p)}</button>`).join("");
     $$("#participantGrid .participant-card").forEach(btn=>btn.onclick=()=>toggleParticipant(btn.dataset.id));
     $("#selectedCounter").textContent=`${sel.size} / 10`;
     $('#sharedDraftBtn').hidden=!sharedStore?.enabled||!state.activeDraft;
     $("#generateBtn").disabled=sel.size!==10; $("#addFixedGroupBtn").disabled=sel.size!==10;
   }
+
+  function tierFacts(p){return `<span class="tier-facts"><span class="tier-fact"><span class="tier-fact-label">기준 티어</span><span class="tier-fact-value">${fmt(p.baseTier)}<span class="tier-unit">티어</span></span></span><span class="tier-fact estimated"><span class="tier-fact-label">추정 티어</span><span class="tier-fact-value">${fmt(estimatedTier(p))}<span class="tier-unit">티어</span></span></span></span>`;}
+  function positionChips(p){return `<span class="position-chips">${ROLES.filter(r=>p.possible[r]).map(r=>`<span class="position-chip">${ROLE_KR[r]}</span>`).join('')}</span>`;}
 
   function toggleParticipant(id){
     const a=state.session.selectedIds, idx=a.indexOf(id);
@@ -212,7 +215,7 @@ import { SharedStore, mergeDocuments } from './shared-store.js?v=6-room-ui-20261
   function renderTierList(targetId,markSelected=true){
     const selected=new Set(state.session.selectedIds);
     const sorted=[...state.roster].sort((a,b)=>estimatedTier(a)-estimatedTier(b)||a.name.localeCompare(b.name,"ko"));
-    $(targetId).innerHTML=`<div class="tier-ranking">${sorted.map((p,i)=>`<button type="button" class="tier-rank-row ${markSelected&&selected.has(p.id)?"selected":""}" data-player-detail-id="${p.id}"><div class="tier-rank">${i+1}</div><div class="tier-rank-main"><strong>${escapeHtml(p.name)}${markSelected&&selected.has(p.id)?'<span class="today-mark">오늘</span>':''}</strong><small>기준 ${fmt(p.baseTier)} · ${recordText(p)}</small></div><div class="tier-est"><span>추정</span><b>${fmt(estimatedTier(p))}</b></div></button>`).join("")}</div>`;
+    $(targetId).innerHTML=`<div class="tier-ranking">${sorted.map((p,i)=>`<button type="button" class="tier-rank-row ${markSelected&&selected.has(p.id)?"selected":""}" data-player-detail-id="${p.id}"><span class="tier-rank">${i+1}</span><span class="tier-rank-main"><strong>${escapeHtml(p.name)}${markSelected&&selected.has(p.id)?'<span class="today-mark">오늘</span>':''}</strong><small>${recordText(p)}</small><span class="position-label">가능 포지션</span>${positionChips(p)}</span>${tierFacts(p)}</button>`).join("")}</div>`;
     $$(`${targetId} [data-player-detail-id]`).forEach(el=>el.onclick=()=>openPlayerDetail(el.dataset.playerDetailId));
   }
 
