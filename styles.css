@@ -148,3 +148,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sa
 .tier-rank-row{grid-template-columns:32px minmax(0,1fr) 190px;padding:16px;gap:14px;border-radius:8px}.tier-rank-main strong{font-size:18px;line-height:1.5;overflow-wrap:anywhere}.tier-rank-main small{font-size:13px;line-height:1.6;color:var(--muted)}.tier-rank-row .tier-facts{margin:0;align-self:start}.tier-rank{font-size:13px}.today-mark{font-size:12px}.roster-card{padding:16px}.roster-main{min-width:0}.roster-name{font-size:19px;line-height:1.5}.roster-name .badge{font-size:15px;color:#4338ca;padding:4px 8px}.roster-meta{font-size:14px;line-height:1.7;color:var(--muted)}.roster-meta.role-estimates{color:var(--text)!important}.player-name{font-size:17px}.player-tier{font-size:14px;line-height:1.7;color:var(--text)}.role-tag{font-size:12px}.role-detail-tier{font-size:22px}.detail-summary-grid b{font-size:22px}.detail-summary-grid small,.role-detail-row small{font-size:13px}
 .formula{min-width:0;max-width:100%;padding:18px 16px;border:1px solid var(--line-soft);border-radius:6px;background:var(--panel-2);color:var(--text);font-family:inherit;overflow-wrap:normal;overflow-x:auto}.math-line{padding:8px 0;font-size:22px;line-height:1.6;min-width:max-content}.math-line math{display:block;text-align:left;margin:0}.formula-title strong{font-size:18px}.formula-notes p,.criteria-note{color:var(--muted)}.role-rules-table{display:block;overflow-x:auto;max-width:100%}
 @media(max-width:600px){.tier-rank-row{grid-template-columns:28px minmax(0,1fr);gap:10px}.tier-rank-row .tier-facts{grid-column:2;margin-top:4px}.participant-card{padding:12px;min-height:180px}.participant-card strong{font-size:18px}.tier-facts{gap:6px}.tier-fact-value{font-size:23px}.tier-unit{font-size:11px;margin-left:3px}.tier-fact-label{font-size:12px}.position-chip{font-size:12px;padding:2px 5px}.math-line{font-size:19px}.formula{padding:14px 10px}.role-detail-row small{font-size:12px}.role-detail-row b{font-size:13px}}
+
+/* Match entry: constrain nested intrinsic sizes, including Safari native date controls. */
+.past-modal,.result-modal{width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);min-width:0}
+#pastForm,.result-modal>form,.stat-entry,.stat-role-card,.field,.past-row,.past-head,.modal-actions{min-width:0;max-width:100%}
+.past-modal form,.result-modal form{width:100%;padding:0}
+.past-modal .field,.result-modal .field{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.past-modal input,.past-modal select,.result-modal input,.result-modal select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+#pastDate{display:block;min-inline-size:0;inline-size:100%;max-inline-size:100%;overflow:hidden}
+#pastDate::-webkit-date-and-time-value{min-width:0;text-align:left}
+#pastDate::-webkit-datetime-edit{min-width:0;padding:0}
+.past-row>* , .past-head>* , .stat-compact-row>* , .stat-side-labels>*{min-width:0}
+.triple-input{grid-template-columns:repeat(3,minmax(0,1fr));min-width:0}
+.stat-compact-row>span{white-space:nowrap}
+.stat-role-head{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start}
+.stat-role-head>div{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;text-align:center;gap:6px}
+.stat-role-head span{min-width:0;overflow-wrap:anywhere}
+.stat-role-card p,.stat-assessment,.stat-final,.modal-actions button{min-width:0;overflow-wrap:anywhere}
+.stat-final label{display:flex;align-items:center;gap:8px}
+.stat-final input[type=checkbox]{width:20px;min-width:20px;height:20px;min-height:20px;flex:0 0 20px}
+.modal-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:430px){
+ .past-modal,.result-modal{padding:16px;max-height:calc(100dvh - 24px)}
+ .stat-role-card{padding:12px}
+ .stat-role-head{grid-template-columns:minmax(0,1fr);gap:8px}
+ .stat-role-head>div{font-size:13px;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+ .stat-compact-row,.stat-side-labels{grid-template-columns:44px minmax(0,1fr) minmax(0,1fr);gap:6px}
+ .past-row,.past-head{grid-template-columns:32px minmax(0,1fr) 20px minmax(0,1fr);gap:4px}
+ .past-row select{padding-inline:6px}
+}
+@media(max-width:360px){.triple-input{grid-template-columns:1fr}}

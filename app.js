@@ -1,5 +1,5 @@
-import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js?v=6-readable-20261001';
-import { SharedStore, mergeDocuments } from './shared-store.js?v=6-readable-20261001';
+import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js?v=6-entry-layout-20261001';
+import { SharedStore, mergeDocuments } from './shared-store.js?v=6-entry-layout-20261001';
 (() => {
   const PRIOR = [1.00,1.08,1.00,0.95]; // TOP, JG, MID, BOT
   const STORAGE_KEY = "naejun_matchmaker_web_v1"; // v2와 동일: 기존 데이터 이어받기
@@ -146,10 +146,10 @@ import { SharedStore, mergeDocuments } from './shared-store.js?v=6-readable-2026
     $(target).innerHTML=ROLES.map(r=>{
       const info=roleMap[r]; statsObj[r] ||= {A:emptyGameStat(),B:emptyGameStat()};
       const input=(side,k)=>`<input aria-label="${ROLE_KR[r]} ${side}팀 ${escapeHtml(side==='A'?info.aName:info.bName)} ${labels[k]}" id="${prefix}-${r}-${side}-${k}" data-stat-input="1" inputmode="numeric" type="number" min="${k==='level'?1:0}" max="${k==='level'?20:k==='gold'?1000000:10000}" step="1" value="${statsObj[r][side][k]??''}">`;
-      return `<section class="stat-role-card" data-role="${r}"><div class="stat-role-head"><strong>${ROLE_KR[r]}</strong><div><span class="team-a-text">A ${escapeHtml(info.aName)}</span><i>VS</i><span class="team-b-text">B ${escapeHtml(info.bName)}</span></div></div><p class="role-definition">${ROLE_RULES[r].definition}</p><div class="stat-side-labels"><span></span><b>A팀</b><b>B팀</b></div>
+      return `<section class="stat-role-card" data-role="${r}"><div class="stat-role-head"><strong>${ROLE_KR[r]}</strong><div><span class="team-a-text">A팀 · ${escapeHtml(info.aName)}</span><i>VS</i><span class="team-b-text">B팀 · ${escapeHtml(info.bName)}</span></div></div><p class="role-definition">${ROLE_RULES[r].definition}</p><div class="stat-side-labels"><span></span><b>A팀</b><b>B팀</b></div>
         <div class="stat-compact-row"><span>레벨</span>${input('A','level')}${input('B','level')}</div>
-        <div class="stat-compact-row"><span>K / D / A</span><div class="triple-input">${['k','d','a'].map(k=>input('A',k)).join('')}</div><div class="triple-input">${['k','d','a'].map(k=>input('B',k)).join('')}</div></div>
-        <div class="stat-compact-row"><span>CS</span>${input('A','cs')}${input('B','cs')}</div><div class="stat-compact-row"><span>획득 골드</span>${input('A','gold')}${input('B','gold')}</div>
+        <div class="stat-compact-row"><span>K/D/A</span><div class="triple-input">${['k','d','a'].map(k=>input('A',k)).join('')}</div><div class="triple-input">${['k','d','a'].map(k=>input('B',k)).join('')}</div></div>
+        <div class="stat-compact-row"><span>CS</span>${input('A','cs')}${input('B','cs')}</div><div class="stat-compact-row"><span>골드</span>${input('A','gold')}${input('B','gold')}</div>
         <div class="stat-assessment" id="${prefix}-assessment-${r}"><span>수치상 비교</span><b>입력 대기</b></div>
         <details class="stat-final"><summary>이 포지션 보정 설정</summary><label><input type="checkbox" data-exclude-role="${r}" ${modeObj[r]==='U'?'checked':''}> 이번 경기의 포지션 보정에서 제외</label></details></section>`;
     }).join('');
@@ -404,7 +404,7 @@ import { SharedStore, mergeDocuments } from './shared-store.js?v=6-readable-2026
   }
 
   function pastRoleMapFromSelectors(requireAll=false){
-    const roleMap={},ids=[];for(const r of ROLES){const aId=$(`#pastA-${r}`)?.value||"",bId=$(`#pastB-${r}`)?.value||"";if(requireAll&&(!aId||!bId))return null;roleMap[r]={aId,bId,aName:playerById(aId)?.name||"A 선수",bName:playerById(bId)?.name||"B 선수",aTier:aId?roleTier(playerById(aId),r):3,bTier:bId?roleTier(playerById(bId),r):3};if(aId)ids.push(aId);if(bId)ids.push(bId);}return {roleMap,ids};
+    const roleMap={},ids=[];for(const r of ROLES){const aId=$(`#pastA-${r}`)?.value||"",bId=$(`#pastB-${r}`)?.value||"";if(requireAll&&(!aId||!bId))return null;roleMap[r]={aId,bId,aName:playerById(aId)?.name||"선수 선택 전",bName:playerById(bId)?.name||"선수 선택 전",aTier:aId?roleTier(playerById(aId),r):3,bTier:bId?roleTier(playerById(bId),r):3};if(aId)ids.push(aId);if(bId)ids.push(bId);}return {roleMap,ids};
   }
   function openPastDialog(){
     const sorted=[...state.roster].sort((a,b)=>estimatedTier(a)-estimatedTier(b)||a.name.localeCompare(b.name,"ko")),options='<option value="">선택</option>'+sorted.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (추정 ${fmt(estimatedTier(p))})</option>`).join("");

@@ -1,4 +1,4 @@
-import { cloudEndpoint } from './cloud-config.js?v=6-readable-20261001';
+import { cloudEndpoint } from './cloud-config.js?v=6-entry-layout-20261001';
 const $ = selector => document.querySelector(selector);
 const clone = value => value===undefined?undefined:JSON.parse(JSON.stringify(value));
 const shared = state => { const value=clone(state); delete value.session; return value; };

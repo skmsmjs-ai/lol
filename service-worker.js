@@ -1,5 +1,5 @@
-const CACHE = 'naejun-matchmaker-v6-readable-20261001';
-const ASSETS = ['./','./index.html','./styles.css?v=6-readable-20261001','./app.js?v=6-readable-20261001','./role-model.js?v=6-readable-20261001','./shared-store.js?v=6-readable-20261001','./cloud-config.js?v=6-readable-20261001','./matcher-worker.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const CACHE = 'naejun-matchmaker-v6-entry-layout-20261001';
+const ASSETS = ['./','./index.html','./styles.css?v=6-entry-layout-20261001','./app.js?v=6-entry-layout-20261001','./role-model.js?v=6-entry-layout-20261001','./shared-store.js?v=6-entry-layout-20261001','./cloud-config.js?v=6-entry-layout-20261001','./matcher-worker.js','./manifest.webmanifest?v=6-entry-layout-20261001','./icon-entry-180.png','./icon-entry-192.png','./icon-entry-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS.map(path=>new Request(new URL(path,self.location.href),{cache:'reload'})))).then(()=>self.skipWaiting()));
 });
