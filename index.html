@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=6-room-ui-20261001">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -31,7 +31,7 @@
         <div class="hero-card">
           <div>
             <span class="hero-kicker">오늘의 로비</span>
-            <strong>10명을 고르면, 역할까지 같이 맞춥니다.</strong>
+            <h2 class="page-title">팀 나누기</h2>
             <p>전체 체급만 반으로 자르지 않고 같은 역할의 격차와 바텀 조합까지 함께 계산합니다.</p>
           </div>
           <span id="selectedCounter" class="counter">0 / 10</span>
@@ -61,7 +61,7 @@
         </section>
 
         <button id="generateBtn" class="primary-btn large" disabled>
-          <span>황금 밸런스 만들기</span><span class="arrow">→</span>
+          <span>팀 조합 만들기</span><span class="arrow">→</span>
         </button>
 
         <section id="resultSection" class="result-section hidden">
@@ -76,7 +76,7 @@
           <div class="section-head result-head plans-head">
             <div>
               <p class="eyebrow">TOP MATCHES</p>
-              <h2>황금 밸런스 후보</h2>
+              <h2>추천 팀 조합</h2>
               <p>2·3안은 가능한 한 1안과 팀당 2명 이상 다른 구성으로 골라냅니다.</p>
             </div>
             <span id="planCountBadge" class="badge"></span>
@@ -226,8 +226,8 @@
       </section>
     </main>
 
-    <nav class="bottom-nav" aria-label="주요 메뉴">
-      <button class="nav-btn active" data-tab="match"><span>◇</span><small>매칭</small></button>
+    <nav class="bottom-nav" aria-label="주요 메뉴"><p class="nav-heading">내전 공간</p>
+      <button class="nav-btn active" data-tab="match" aria-current="page"><span>◇</span><small>매칭</small></button>
       <button class="nav-btn" data-tab="roster"><span>＋</span><small>멤버</small></button>
       <button class="nav-btn" data-tab="criteria"><span>∑</span><small>기준</small></button>
       <button class="nav-btn" data-tab="history"><span>↗</span><small>기록</small></button>
@@ -359,13 +359,13 @@
   </dialog>
 
   <dialog id="entryDialog" class="modal entry-modal">
-    <form id="entryForm"><h2>우리 내전에 입장</h2><p class="muted">공유받은 4자리 비밀번호를 입력해 주세요.</p><label class="field">입장 비밀번호<input id="entryPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required></label><p id="entryError" class="form-error" role="alert"></p><button class="primary-btn large">입장</button><button id="entryAdminBtn" type="button" class="text-btn">관리자 로그인</button><button id="entryRetryBtn" type="button" class="text-btn" hidden>연결 다시 확인</button></form>
+    <form id="entryForm"><h2>우리 내전에 입장</h2><p class="muted">공유받은 4자리 입장 번호를 입력해 주세요.</p><label class="field">입장 번호<input id="entryPin" type="text" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="entryError" required></label><p id="entryError" class="form-error" role="alert"></p><button class="primary-btn large">입장</button><button id="entryAdminBtn" type="button" class="text-btn">관리자 로그인</button><button id="entryRetryBtn" type="button" class="text-btn" hidden>연결 다시 확인</button></form>
   </dialog>
   <dialog id="adminDialog" class="modal">
     <div class="modal-head"><h2>관리자</h2><form method="dialog"><button class="icon-btn" aria-label="관리자 닫기">×</button></form></div>
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=6-account-20261001"></script>
+  <script type="module" src="app.js?v=6-room-ui-20261001"></script>
 </body>
 </html>

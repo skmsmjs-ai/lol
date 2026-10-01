@@ -1,4 +1,4 @@
-import { cloudEndpoint } from './cloud-config.js';
+import { cloudEndpoint } from './cloud-config.js?v=6-room-ui-20261001';
 const $ = selector => document.querySelector(selector);
 const clone = value => value===undefined?undefined:JSON.parse(JSON.stringify(value));
 const shared = state => { const value=clone(state); delete value.session; return value; };
@@ -42,7 +42,7 @@ export class SharedStore {
   cache() {try{localStorage.setItem(this.cacheKey,JSON.stringify({base:this.base,pending:this.pending,revision:this.revision}));return true;}catch{this.status('기기 백업을 저장하지 못했습니다 · 서버 저장 상태를 확인해 주세요');}}
   bind() {
     $('#entryDialog').addEventListener('cancel',event=>event.preventDefault());
-    $('#entryForm').onsubmit=async event=>{event.preventDefault();try{await this.request('enter','POST',{pin:$('#entryPin').value});$('#entryPin').value='';$('#entryError').textContent='';await this.connected();}catch(error){$('#entryError').textContent=error.message;}};
+    $('#entryForm').onsubmit=async event=>{event.preventDefault();try{await this.request('enter','POST',{pin:$('#entryPin').value.trim()});$('#entryPin').value='';$('#entryError').textContent='';await this.connected();}catch(error){$('#entryError').textContent=error.status===401?'입장 번호가 맞지 않습니다. 공유받은 4자리 번호를 확인해 주세요.':error.message;}};
     $('#entryAdminBtn').onclick=()=>$('#adminDialog').showModal();
     $('#adminOpenBtn').onclick=()=>{if(!this.enabled){this.toast('관리자 옵션은 공유 서버에서 사용할 수 있습니다.');return;}$('#adminDialog').showModal();};
     $('#adminLoginForm').onsubmit=async event=>{event.preventDefault();try{await this.request('admin/login','POST',{username:$('#adminUsername').value,password:$('#adminPassword').value});$('#adminPassword').value='';await this.connected();}catch(error){$('#adminError').textContent=error.message;}};
