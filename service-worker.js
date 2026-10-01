@@ -1,4 +1,4 @@
-const CACHE = 'naejun-matchmaker-v6-cloud-20261001';
+const CACHE = 'naejun-matchmaker-v6-account-20261001';
 const ASSETS = ['./','./index.html','./styles.css','./app.js','./role-model.js','./shared-store.js','./cloud-config.js','./matcher-worker.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
