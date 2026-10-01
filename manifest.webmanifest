@@ -2,12 +2,12 @@
   "id": "./",
   "name": "내전 자동 매칭기",
   "short_name": "내전 매칭기",
-  "description": "LOL 5대5 내전 황금 밸런스 팀을 만들고 실제 승패와 수기로 입력한 KDA·CS·선택 경기수치로 선수 추정 티어를 학습합니다.",
+  "description": "레벨·K/D/A·CS·게임 시간·골드로 기록하고 같은 포지션을 비교하는 우리 내전 공간",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#090c11",
-  "theme_color": "#090c11",
+  "background_color": "#f9fafb",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "icon-192.png",

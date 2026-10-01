@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#090c11">
+  <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
@@ -25,6 +25,7 @@
       <button id="installHelpBtn" class="icon-btn" aria-label="설치 안내">?</button>
     </header>
 
+    <div class="save-strip"><span id="saveStatus" role="status">저장 상태 확인 중</span><button id="syncRetryBtn" class="text-btn" hidden>다시 저장</button><button id="cloudReloadBtn" class="text-btn" hidden>최신 자료 확인</button><button id="adminOpenBtn" class="text-btn">관리자</button></div>
     <main>
       <section id="tab-match" class="tab-panel active">
         <div class="hero-card">
@@ -44,6 +45,7 @@
             </div>
             <button id="clearSelectionBtn" class="text-btn">초기화</button>
           </div>
+          <button id="sharedDraftBtn" type="button" class="secondary-btn" hidden>공유 경기 입력</button><button id="resumeDraftBtn" class="secondary-btn" hidden>입력하던 경기 이어 쓰기</button>
           <div id="participantGrid" class="participant-grid"></div>
         </section>
 
@@ -107,7 +109,7 @@
           <article class="principle-card"><span>01</span><strong>전체 체급</strong><p>두 팀의 티어 합이 크게 벌어지면 기본 벌점을 줍니다.</p></article>
           <article class="principle-card"><span>02</span><strong>역할 대칭</strong><p>TOP·JG·MID의 맞상대 격차는 제곱으로 커지고, 1티어를 넘으면 추가 벌점이 붙습니다.</p></article>
           <article class="principle-card"><span>03</span><strong>바텀 상호보완</strong><p>ADC·SUP는 개별 차이와 함께 2인 조합 지수를 별도로 계산합니다.</p></article>
-          <article class="principle-card"><span>04</span><strong>실전 학습</strong><p>K/D/A·CS와 선택 수치를 직접 입력해 통계 판정을 만들고, 승패와 함께 선수 추정치를 조금씩 갱신합니다.</p></article>
+          <article class="principle-card"><span>04</span><strong>실전 학습</strong><p>레벨·K/D/A·CS·시간·골드를 입력해 수치상 비교를 만들고, 승패와 함께 선수 추정치를 조금씩 갱신합니다.</p></article>
         </div>
 
         <section class="formula-card">
@@ -133,31 +135,31 @@
         </section>
 
         <section class="formula-card">
-          <div class="formula-title"><span>3</span><div><strong>경기 결과 수기 입력 · 통계 판정</strong><p>OCR 대신 숫자를 직접 넣고 같은 포지션 두 선수만 비교합니다.</p></div></div>
-          <div class="formula">d(a,b) = (a − b) / (|a| + |b| + ε)<br>S<sub>r</sub> = Σ w<sub>r,m</sub>d<sub>m</sub> / Σ w<sub>r,m</sub></div>
-          <p class="criteria-note">K/D/A와 CS는 필수, 피해량·골드·시야 점수는 선택입니다. KDA는 (K+A)/max(1,D)를 log(1+x)로 압축하고, 킬관여율은 10명의 킬 수에서 자동 계산합니다. 선택 수치가 비어 있으면 해당 항목만 제외하고 남은 가중치를 다시 100%로 정규화합니다.</p>
-          <div class="stat-weight-table">
-            <div><b>TOP</b><span>KDA 20</span><span>KP 10</span><span>CS 25</span><span>피해 25</span><span>골드 15</span><span>시야 5</span></div>
-            <div><b>JG</b><span>KDA 20</span><span>KP 25</span><span>CS 10</span><span>피해 15</span><span>골드 10</span><span>시야 20</span></div>
-            <div><b>MID</b><span>KDA 20</span><span>KP 15</span><span>CS 20</span><span>피해 25</span><span>골드 15</span><span>시야 5</span></div>
-            <div><b>ADC</b><span>KDA 20</span><span>KP 15</span><span>CS 20</span><span>피해 30</span><span>골드 15</span><span>시야 0</span></div>
-            <div><b>SUP</b><span>KDA 20</span><span>KP 30</span><span>CS 0</span><span>피해 10</span><span>골드 5</span><span>시야 35</span></div>
-          </div>
-          <div class="criteria-flow"><span>|S| &lt; 0.10 → 비슷</span><i>→</i><span>0.10~0.22 → 약우세</span><i>→</i><span>0.22~0.38 → 우세</span><i>→</i><span>0.38+ → 큰 우세</span></div>
-          <p class="criteria-note">통계 판정을 그대로 쓰면 연속 점수로 보수적으로 학습하고, 사람이 A 우세·비슷·B 우세로 직접 바꾸면 그 판정을 더 강한 근거로 사용합니다. ‘제외’는 해당 포지션 학습만 건너뜁니다. 이 점수는 라인전만이 아니라 경기 전체의 포지션별 성과 지표입니다.</p>
+          <div class="formula-title"><span>3</span><div><strong>다섯 입력으로 같은 포지션 비교</strong><p>레벨·K/D/A·CS·게임 시간·획득 골드만 사용합니다.</p></div></div>
+          <div class="formula">성장 = 골드/분·CS/분·레벨 비교의 묶음<br>킬 관여 = (K+A) / 팀 전체 킬<br>KDA 효율 = log(1 + (K+A)/max(1,D))</div>
+          <p class="criteria-note">같은 경기의 같은 포지션 상대와 비교합니다. 서로 연관된 골드·CS·레벨은 성장 한 묶음 안에 넣어 중복 반영을 제한합니다. 게임 시간은 분당 수치와 짧은 경기의 보정 축소에 사용합니다.</p>
+          <table class="role-rules-table"><caption>포지션별 수치상 ‘잘함’의 정의와 초기 비중</caption><thead><tr><th>포지션</th><th>기준</th><th>성장</th><th>킬 관여</th><th>KDA</th></tr></thead><tbody>
+            <tr><th>탑</th><td>성장 유지와 교전 기여</td><td>60%</td><td>15%</td><td>25%</td></tr>
+            <tr><th>정글</th><td>성장과 팀 교전 참여</td><td>40%</td><td>35%</td><td>25%</td></tr>
+            <tr><th>미드</th><td>성장과 교전 기여의 균형</td><td>50%</td><td>25%</td><td>25%</td></tr>
+            <tr><th>원딜</th><td>CS·골드 확보와 KDA 효율</td><td>65%</td><td>15%</td><td>20%</td></tr>
+            <tr><th>서포터</th><td>교전 참여와 KDA 효율 · CS 제외</td><td>10%</td><td>60%</td><td>30%</td></tr>
+          </tbody></table>
+          <p class="criteria-note">이 비중은 내전용 초기 규칙입니다. Riot 공식 평가나 검증된 실력 척도가 아닙니다. 시야·오브젝트·피해량·보호·운영은 추정하지 않습니다. 종료 수치는 라인전 승리를 뜻하지 않습니다. 팀 킬이 0이면 킬 관여는 미확인으로 두고 다른 항목의 비중을 늘리지 않습니다.</p>
+          <p class="criteria-note">서포터의 낮은 CS는 감점하지 않고 킬과 어시스트를 같은 참여로 셉니다. 한 경기 포지션 보정은 최대 0.04로 제한하며, 관측 범위가 좁은 정글·서포터는 더 약하게 반영합니다. 승리팀을 생략하면 승패나 전체 실력 보정을 만들지 않습니다.</p>
         </section>
 
         <section class="formula-card">
           <div class="formula-title"><span>4</span><div><strong>실제 내전 학습</strong><p>팀 승패와 포지션 성과를 서로 다른 통로로 학습합니다.</p></div></div>
           <div class="formula">p(A) = sigmoid(w<sub>T</sub>x<sub>T</sub> + w<sub>J</sub>x<sub>J</sub> + w<sub>M</sub>x<sub>M</sub> + w<sub>B</sub>x<sub>B</sub>)</div>
           <div class="criteria-flow"><span>A/B 승리</span><i>→</i><span>전체 실력 보정</span><i>+</i><span>수기 경기 수치</span><i>→</i><span>역할별 실력 보정</span></div>
-          <p class="criteria-note">한두 판 때문에 추정치가 급변하지 않도록 경기 수가 늘수록 변화폭을 줄입니다. 통계 자동판정의 학습 강도는 수치 완성도에 따라 약 35~65%로 제한하고, 직접 수정한 판정도 90% 강도로 제한합니다.</p>
+          <p class="criteria-note">한두 판 때문에 추정치가 급변하지 않도록 경기 수가 늘수록 변화폭을 줄입니다. 수치상 비교의 반영 강도는 포지션에 따라 25~45% 이하입니다. 20분 미만 경기는 더 약하게 반영하고, 해당 포지션 보정을 제외할 수 있습니다.</p>
         </section>
 
         <section class="formula-card">
           <div class="formula-title"><span>5</span><div><strong>선수 티어 자동 보정</strong><p>사람이 정한 기준 티어는 보존하고, 실제 경기에서 별도의 추정값만 움직입니다.</p></div></div>
           <div class="formula">T<sub>추정</sub> = T<sub>기준</sub> − R<sub>전체</sub><br>T<sub>역할</sub> = T<sub>추정</sub> − R<sub>역할</sub></div>
-          <p class="criteria-note">숫자가 낮을수록 강합니다. 팀 승패는 전체 보정값에, 같은 역할의 실제 우세는 역할별 보정값에 반영합니다. 예를 들어 기준 3티어 선수가 미드에서 반복해서 더 높은 티어 선수를 앞서면 ‘전체 추정 2.8 / MID 역할 추정 2.5’처럼 변할 수 있습니다. 기준 티어 자체는 사용자가 수정하기 전까지 바뀌지 않습니다.</p>
+          <p class="criteria-note">숫자가 낮을수록 강합니다. 팀 승패는 전체 보정값에, 같은 역할의 수치상 비교는 역할별 보정값에 반영합니다. 예를 들어 기준 3티어 선수가 미드에서 반복해서 더 높은 티어 선수를 앞서면 ‘전체 추정 2.8 / MID 역할 추정 2.5’처럼 변할 수 있습니다. 기준 티어 자체는 사용자가 수정하기 전까지 바뀌지 않습니다.</p>
         </section>
 
         <section class="card live-model-card">
@@ -187,7 +189,7 @@
         <section class="friend-card">
           <p class="eyebrow">ONE-LINE EXPLANATION</p>
           <h3>친구들에게 이렇게 설명하면 됩니다.</h3>
-          <blockquote>“기준 티어에 실제 전적 보정을 얹고, 같은 역할 실력차를 줄여서 팀을 짜. 끝나고 KDA·CS를 직접 넣고, 있으면 피해량·골드·시야도 넣으면 포지션 성과를 계산해서 다음 매칭에 천천히 반영돼.”</blockquote>
+          <blockquote>“기준 티어에 실제 전적 보정을 얹고, 같은 역할 실력차를 줄여서 팀을 짜. 끝나고 레벨·K/D/A·CS·시간·골드만 넣으면 같은 포지션을 비교해서 다음 매칭에 천천히 반영돼.”</blockquote>
         </section>
       </section>
 
@@ -203,18 +205,18 @@
 
         <div class="card weights-card">
           <h3>현재 역할 영향도</h3>
-          <p class="muted">승패와 포지션별 실제 우세가 누적될수록 조금씩 변합니다. 한 경기의 영향은 작게 제한합니다.</p>
+          <p class="muted">승패를 기록한 경기에 따라 조금씩 변합니다. 포지션별 수치 보정은 별도로 반영합니다. 한 경기의 영향은 작게 제한합니다.</p>
           <div id="weightBars" class="weight-bars"></div>
         </div>
 
         <div class="section-head compact">
           <h3>최근 경기</h3>
         </div>
-        <div id="historyList" class="history-list"></div>
+        <button id="historyMoreBtn" class="secondary-btn" hidden>경기 기록 더 보기</button><div id="historyList" class="history-list"></div>
 
         <div class="card data-card">
           <h3>데이터 보관</h3>
-          <p>평소에는 이 iPhone 안에 자동 저장됩니다. Safari 데이터 삭제나 기기 변경에 대비할 때만 백업하면 됩니다.</p>
+          <p>상단에서 기기 저장·서버 저장 상태를 확인할 수 있습니다. 중요한 경기 기록은 백업 파일로도 보관해 주세요.</p>
           <div class="button-row">
             <button id="exportBtn" class="secondary-btn">백업 내보내기</button>
             <label class="secondary-btn file-label">백업 불러오기<input id="importInput" type="file" accept="application/json,.json" hidden></label>
@@ -241,7 +243,7 @@
           <p class="eyebrow" id="memberDialogEyebrow">NEW PLAYER</p>
           <h2 id="memberDialogTitle">새 멤버 추가</h2>
         </div>
-        <button value="cancel" class="icon-btn">×</button>
+        <button value="cancel" formnovalidate class="icon-btn">×</button>
       </div>
       <input type="hidden" id="memberId">
       <label class="field">이름<input id="memberName" required maxlength="20" autocomplete="off"></label>
@@ -253,7 +255,7 @@
         <div id="memberImpossibleRoles" class="role-checks"></div>
       </fieldset>
       <div class="modal-actions">
-        <button value="cancel" class="secondary-btn">취소</button>
+        <button value="cancel" formnovalidate class="secondary-btn">취소</button>
         <button id="saveMemberBtn" value="default" class="primary-btn">저장</button>
       </div>
     </form>
@@ -266,12 +268,12 @@
           <p class="eyebrow">FIXED GROUP</p>
           <h2>같은 팀으로 묶기</h2>
         </div>
-        <button value="cancel" class="icon-btn">×</button>
+        <button value="cancel" formnovalidate class="icon-btn">×</button>
       </div>
       <p class="muted">같은 PC방에 있는 사람처럼 반드시 같은 팀이어야 하는 2~5명을 선택하세요.</p>
       <div id="groupMemberChoices" class="participant-grid compact-grid"></div>
       <div class="modal-actions">
-        <button value="cancel" class="secondary-btn">취소</button>
+        <button value="cancel" formnovalidate class="secondary-btn">취소</button>
         <button id="saveGroupBtn" value="default" class="primary-btn">그룹 추가</button>
       </div>
     </form>
@@ -284,18 +286,18 @@
           <p class="eyebrow">MATCH RESULT</p>
           <h2 id="resultDialogTitle">경기 결과 입력</h2>
         </div>
-        <button value="cancel" class="icon-btn">×</button>
+        <button value="cancel" formnovalidate class="icon-btn">×</button>
       </div>
       <p id="resultDialogText" class="muted"></p>
-      <div class="winner-grid">
+      <p class="field-help">승리팀은 선택 사항입니다. 모르면 생략하세요.</p><div class="winner-grid">
         <button type="button" class="winner-btn team-a winner-choice" data-winner="A">A팀 승리</button>
         <button type="button" class="winner-btn team-b winner-choice" data-winner="B">B팀 승리</button>
       </div>
-      <label class="field">경기시간 <small>선택 · 예: 31:42</small><input id="resultDuration" inputmode="numeric" placeholder="31:42"></label>
-      <div class="result-subhead"><strong>10명 경기 수치</strong><small>K/D/A·CS 필수 · 나머지 선택</small></div>
+      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="resultDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초"></label>
+      <div class="result-subhead"><strong>10명 경기 수치</strong><small>레벨·K/D/A·CS·골드</small></div>
       <div id="resultStatEntry" class="stat-entry"></div>
-      <button id="saveResultBtn" type="button" class="primary-btn large compact-submit" disabled>경기 기록 저장 · 학습</button>
-      <p class="tiny-note">사진·OCR은 사용하지 않습니다. 직접 입력한 원본 수치를 기록하고 통계 판정과 최종 판정을 함께 저장합니다. 기준 티어는 자동으로 덮어쓰지 않습니다.</p>
+      <button id="saveResultBtn" type="button" class="primary-btn large compact-submit">경기 기록 저장 · 학습</button>
+      <p class="tiny-note">사진·OCR은 사용하지 않습니다. 직접 입력한 원본 수치를 기록하고 수치상 비교 결과와 보정 제외 설정을 함께 저장합니다. 기준 티어는 자동으로 덮어쓰지 않습니다.</p>
     </form>
   </dialog>
 
@@ -307,20 +309,20 @@
           <p class="eyebrow">PAST MATCH</p>
           <h2>지난 전적 입력</h2>
         </div>
-        <button value="cancel" class="icon-btn">×</button>
+        <button value="cancel" formnovalidate class="icon-btn">×</button>
       </div>
       <p class="muted">예전 경기의 10명과 결과 수치를 직접 입력합니다. 여러 경기를 넣을 때는 가능하면 오래된 경기부터 입력하세요.</p>
       <label class="field">경기 시각 <small>선택</small><input id="pastDate" type="datetime-local"></label>
-      <label class="field">경기시간 <small>선택 · 예: 31:42</small><input id="pastDuration" inputmode="numeric" placeholder="31:42"></label>
-      <label class="field">승리팀
-        <select id="pastWinner" class="full-select"><option value="A">A팀</option><option value="B">B팀</option></select>
+      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="pastDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초"></label>
+      <label class="field">승리팀 <small>선택</small>
+        <select id="pastWinner" class="full-select"><option value="">승패 미기록</option><option value="A">A팀</option><option value="B">B팀</option></select>
       </label>
       <div class="past-head"><span>역할</span><span>A팀</span><span></span><span>B팀</span></div>
       <div id="pastRows" class="past-rows"></div>
-      <div class="result-subhead"><strong>경기 수치</strong><small>K/D/A·CS 필수</small></div>
+      <div class="result-subhead"><strong>경기 수치</strong><small>레벨·K/D/A·CS·골드</small></div>
       <div id="pastStatEntry" class="stat-entry"></div>
       <div class="modal-actions">
-        <button value="cancel" class="secondary-btn">취소</button>
+        <button value="cancel" formnovalidate class="secondary-btn">취소</button>
         <button value="default" class="primary-btn">지난 전적 저장 · 학습</button>
       </div>
     </form>
@@ -331,7 +333,7 @@
     <div class="player-detail-shell">
       <div class="detail-modal-actions">
         <button id="playerDetailEditBtn" type="button" class="secondary-btn">기준 정보 수정</button>
-        <form method="dialog"><button value="cancel" class="icon-btn">×</button></form>
+        <form method="dialog"><button value="cancel" formnovalidate class="icon-btn">×</button></form>
       </div>
       <div id="playerDetailContent"></div>
     </div>
@@ -342,9 +344,9 @@
       <div class="modal-head">
         <div>
           <p class="eyebrow">INSTALL</p>
-          <h2>iPhone에 앱처럼 설치</h2>
+          <h2>기기에서 앱처럼 사용</h2>
         </div>
-        <button value="cancel" class="icon-btn">×</button>
+        <button value="cancel" formnovalidate class="icon-btn">×</button>
       </div>
       <ol class="install-steps">
         <li>이 페이지를 Safari에서 엽니다.</li>
@@ -352,10 +354,18 @@
         <li><strong>웹 앱으로 열기</strong>를 켜고 추가합니다.</li>
         <li>이후 홈 화면의 아이콘으로 실행합니다. 첫 접속 뒤에는 오프라인에서도 기본 기능을 사용할 수 있습니다.</li>
       </ol>
-      <p class="tiny-note">데이터는 이 사이트 주소의 로컬 저장공간에 남습니다. 주소를 바꾸면 별도 저장공간으로 인식되므로, 호스팅 주소는 하나로 유지하는 편이 좋습니다.</p>
+      <p class="tiny-note">iPhone·iPad는 Safari의 홈 화면에 추가, Mac은 Safari의 Dock에 추가를 사용할 수 있습니다. 공유 서버로 접속한 기록은 다른 기기에서도 불러옵니다. 기기 저장 상태에서는 해당 브라우저에만 남습니다.</p>
     </form>
   </dialog>
 
-  <script src="app.js" defer></script>
+  <dialog id="entryDialog" class="modal entry-modal">
+    <form id="entryForm"><h2>우리 내전에 입장</h2><p class="muted">공유받은 4자리 비밀번호를 입력해 주세요.</p><label class="field">입장 비밀번호<input id="entryPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required></label><p id="entryError" class="form-error" role="alert"></p><button class="primary-btn large">입장</button><button id="entryAdminBtn" type="button" class="text-btn">관리자 로그인</button><button id="entryRetryBtn" type="button" class="text-btn" hidden>연결 다시 확인</button></form>
+  </dialog>
+  <dialog id="adminDialog" class="modal">
+    <div class="modal-head"><h2>관리자</h2><form method="dialog"><button class="icon-btn" aria-label="관리자 닫기">×</button></form></div>
+    <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
+    <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" required></label><button class="secondary-btn">관리자 비밀번호 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
+  </dialog>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
