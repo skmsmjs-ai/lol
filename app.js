@@ -1,5 +1,5 @@
 import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js';
-import { SharedStore, mergeDocuments } from './shared-store.js';
+import { SharedStore, mergeDocuments } from './shared-store.js?v=6-account-20261001';
 (() => {
   const PRIOR = [1.00,1.08,1.00,0.95]; // TOP, JG, MID, BOT
   const STORAGE_KEY = "naejun_matchmaker_web_v1"; // v2와 동일: 기존 데이터 이어받기
