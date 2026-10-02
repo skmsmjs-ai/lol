@@ -1,6 +1,6 @@
-import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js?v=6-save-20261003';
-import { SharedStore, mergeDocuments } from './shared-store.js?v=6-save-20261003';
-import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInput } from './entry-input.js?v=6-save-20261003';
+import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate, estimatedTier, roleTier, tierCorrection, tierTrendPoints } from './role-model.js?v=6-tier-20261003';
+import { SharedStore, mergeDocuments } from './shared-store.js?v=6-tier-20261003';
+import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInput } from './entry-input.js?v=6-tier-20261003';
 (() => {
   const PRIOR = [1.00,1.08,1.00,0.95]; // TOP, JG, MID, BOT
   const STORAGE_KEY = "naejun_matchmaker_web_v1"; // v2와 동일: 기존 데이터 이어받기
@@ -129,8 +129,6 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
   function toast(msg){ const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),1900); }
 
   // 기준 티어는 사람이 정한다. 자동 보정값은 경기 기록에서만 움직인다.
-  function estimatedTier(p){ return clamp(p.baseTier-p.rating,-0.5,10); }
-  function roleTier(p,role){ return clamp(estimatedTier(p)-(p.roleRating?.[role]||0),-0.5,10); }
   function possibleText(p){const a=ROLES.filter(r=>p.possible[r]);return a.length===5?"올라운더":a.map(r=>ROLE_KR[r]).join(" · ");}
   function impossibleText(p){const a=ROLES.filter(r=>!p.possible[r]);return a.length?a.map(r=>ROLE_KR[r]).join(" · "):"없음";}
   function recordText(p){return p.stats.games?`${p.stats.wins}승 ${p.stats.losses}패 · ${p.stats.games}경기`:"전적 없음";}
@@ -225,7 +223,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     const sorted=[...state.roster].sort(comparePlayerNames);
     $("#rosterList").innerHTML=sorted.map(p=>{
       const roleLine=ROLES.filter(r=>p.possible[r]).map(r=>`${r} ${fmt(roleTier(p,r))}`).join(" · ");
-      const delta=p.rating>=0?`-${Math.abs(p.rating).toFixed(2)}`:`+${Math.abs(p.rating).toFixed(2)}`;
+      const correction=tierCorrection(p),delta=`${correction<0?"-":"+"}${Math.abs(correction).toFixed(2)}`;
       return `<div class="roster-card"><div class="roster-main roster-open" data-detail-id="${p.id}"><div class="roster-name">${escapeHtml(p.name)} <span class="badge">추정 ${fmt(estimatedTier(p))}</span></div><div class="roster-meta">기준 ${fmt(p.baseTier)} · 자동 보정 ${delta} · ${recordText(p)}</div><div class="roster-meta role-estimates">${escapeHtml(roleLine)}</div><div class="roster-meta">가능: ${escapeHtml(possibleText(p))} · 불가능: ${escapeHtml(impossibleText(p))}</div></div><div class="roster-actions"><button class="detail-btn" data-detail-id="${p.id}">상세</button><button class="edit-btn" data-id="${p.id}">수정</button></div></div>`;
     }).join("");
     $$("#rosterList .edit-btn").forEach(b=>b.onclick=e=>{e.stopPropagation();openMemberDialog(b.dataset.id);});
@@ -264,7 +262,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
   }
 
   function tierTrendSvg(p){
-    const pts=(p.timeline||[]).filter(x=>Number.isFinite(Number(x.tier))).sort((a,b)=>new Date(a.time)-new Date(b.time)).slice(-40);
+    const pts=tierTrendPoints(p);
     if(pts.length<2)return `<div class="trend-empty">v4 이후 경기 결과가 더 쌓이면 추정 티어 변화가 선으로 표시됩니다.</div>`;
     const W=640,H=190,L=42,R=16,T=18,B=30,values=pts.map(x=>Number(x.tier));
     let min=Math.min(...values,Number(p.baseTier)),max=Math.max(...values,Number(p.baseTier));
@@ -284,8 +282,8 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     const games=p.stats.games||0,knownGames=(p.stats.wins||0)+(p.stats.losses||0),winRate=knownGames?100*(p.stats.wins||0)/knownGames:0,rs=detailRoleStats(p),matches=playerMatchRows(p);
     const roleCards=ROLES.map(r=>{const st=rs[r],wr=(st.wins+st.losses)?100*st.wins/(st.wins+st.losses):0,possible=p.possible[r];return `<div class="role-detail-row ${possible?"":"role-disabled"}"><div><strong>${r}</strong><small>${possible?"현재 역할 추정":"현재 배치 불가"}</small></div><div class="role-detail-tier">${possible?fmt(roleTier(p,r)):"—"}</div><div><b>${st.games}경기</b><small>${(st.wins+st.losses)?`${wr.toFixed(0)}% 승률`:"승패 미기록"}</small></div><div><b>${st.better}/${st.even}/${st.worse}</b><small>우세/비슷/열세</small></div></div>`;}).join("");
     const recent=matches.slice(0,8).map(x=>`<div class="player-game-row"><span class="wl ${x.won===null?"unknown":x.won?"win":"loss"}">${x.won===null?"?":x.won?"W":"L"}</span><div><strong>${x.role} vs ${escapeHtml(x.opponentName)}</strong><small>${new Date(x.record.time).toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})} · 수치 ${x.lane} · ${x.record.source==="past"?"지난 전적":"실시간"}</small></div></div>`).join("")||'<div class="empty-note">기록된 경기가 없습니다.</div>';
-    const autoDelta=-Number(p.rating||0);
-    $("#playerDetailContent").innerHTML=`<div class="player-detail-hero"><div><p class="eyebrow">PLAYER PROFILE</p><h2>${escapeHtml(p.name)}</h2><p>전체 ${rank}위 · 가능 ${escapeHtml(possibleText(p))}</p></div><div class="detail-tier-orb"><span>추정</span><b>${fmt(estimatedTier(p))}</b></div></div><div class="detail-summary-grid"><div><small>기준 티어</small><b>${fmt(p.baseTier)}</b></div><div><small>자동 보정</small><b>${autoDelta>=0?"+":""}${autoDelta.toFixed(2)}</b></div><div><small>전적</small><b>${games?`${p.stats.wins}승 ${p.stats.losses}패`:"—"}</b></div><div><small>승률</small><b>${knownGames?`${winRate.toFixed(0)}%`:"—"}</b></div></div><section class="player-detail-section"><div class="detail-section-head"><div><h3>추정 티어 변화</h3><p>기준 티어는 고정하고 실제 경기로 자동 보정된 값의 흐름입니다.</p></div></div>${tierTrendSvg(p)}</section><section class="player-detail-section"><div class="detail-section-head"><div><h3>포지션별 기록</h3><p>현재 역할 추정치와 수치상 비교 기록을 함께 봅니다.</p></div></div><div class="role-detail-list">${roleCards}</div></section><section class="player-detail-section"><div class="detail-section-head"><div><h3>최근 경기</h3><p>최근 8경기에서 맡은 역할과 상대, 라인 판정입니다.</p></div></div><div class="player-game-list">${recent}</div></section>`;
+    const autoDelta=tierCorrection(p);
+    $("#playerDetailContent").innerHTML=`<div class="player-detail-hero"><div><p class="eyebrow">PLAYER PROFILE</p><h2>${escapeHtml(p.name)}</h2><p>전체 ${rank}위 · 가능 ${escapeHtml(possibleText(p))}</p></div><div class="detail-tier-orb"><span>추정</span><b>${fmt(estimatedTier(p))}</b></div></div><div class="detail-summary-grid"><div><small>기준 티어</small><b>${fmt(p.baseTier)}</b></div><div><small>자동 보정</small><b>${autoDelta>=0?"+":""}${autoDelta.toFixed(2)}</b></div><div><small>전적</small><b>${games?`${p.stats.wins}승 ${p.stats.losses}패`:"—"}</b></div><div><small>승률</small><b>${knownGames?`${winRate.toFixed(0)}%`:"—"}</b></div></div><section class="player-detail-section"><div class="detail-section-head"><div><h3>추정 티어 변화</h3><p>과거 점은 당시 추정치이며, 마지막 점은 현재 민감도 2배를 반영합니다.</p></div></div>${tierTrendSvg(p)}</section><section class="player-detail-section"><div class="detail-section-head"><div><h3>포지션별 기록</h3><p>현재 역할 추정치와 수치상 비교 기록을 함께 봅니다.</p></div></div><div class="role-detail-list">${roleCards}</div></section><section class="player-detail-section"><div class="detail-section-head"><div><h3>최근 경기</h3><p>최근 8경기에서 맡은 역할과 상대, 라인 판정입니다.</p></div></div><div class="player-game-list">${recent}</div></section>`;
     $("#playerDetailEditBtn").onclick=()=>{$("#playerDetailDialog").close();openMemberDialog(id);};
     $("#playerDetailDialog").showModal();
   }
@@ -344,12 +342,12 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
   }
 
   function showLoading(show,text="가능한 조합을 계산하고 있습니다…"){let el=$("#loadingOverlay");if(show){if(!el){el=document.createElement("div");el.id="loadingOverlay";el.className="loading-overlay";el.innerHTML=`<div class="loading-box"><div class="spinner"></div><strong>${escapeHtml(text)}</strong><p class="muted" style="font-size:12px;margin-top:6px">현재 추정 티어·역할 숙련·고정팀 조건까지 전수 비교합니다.</p></div>`;document.body.appendChild(el);}}else el?.remove();}
-  function generate(){if(state.session.selectedIds.length!==10)return;showLoading(true);if(worker)worker.terminate();worker=new Worker("matcher-worker.js");worker.onmessage=e=>{if(e.data.progress)return;showLoading(false);if(e.data.error){toast(e.data.error);return;}currentPlans=e.data.plans||[];renderPlans();if(!currentPlans.length)toast("현재 조건으로 가능한 정상 배치가 없습니다.");};worker.onerror=()=>{showLoading(false);toast("계산 중 오류가 발생했습니다.");};worker.postMessage({players:selectedPlayers(),model:state.model,fixedGroups:state.session.fixedGroups});}
+  function generate(){if(state.session.selectedIds.length!==10)return;showLoading(true);if(worker)worker.terminate();worker=new Worker("matcher-worker.js?v=6-tier-20261003",{type:"module"});worker.onmessage=e=>{if(e.data.progress)return;showLoading(false);if(e.data.error){toast(e.data.error);return;}currentPlans=e.data.plans||[];renderPlans();if(!currentPlans.length)toast("현재 조건으로 가능한 정상 배치가 없습니다.");};worker.onerror=()=>{showLoading(false);toast("계산 중 오류가 발생했습니다.");};worker.postMessage({players:selectedPlayers(),model:state.model,fixedGroups:state.session.fixedGroups});}
 
   function openMemberDialog(id=null){
     const p=id?playerById(id):null;$("#memberId").value=p?.id||"";$("#memberName").value=p?.name||"";$("#memberTier").value=p?.baseTier??3;$("#memberDialogTitle").textContent=p?"멤버 수정":"새 멤버 추가";$("#memberDialogEyebrow").textContent=p?"EDIT PLAYER":"NEW PLAYER";
     $("#memberImpossibleRoles").innerHTML=ROLES.map(r=>`<label class="role-check"><input type="checkbox" data-role="${r}" ${p&&!p.possible[r]?"checked":""}><span>${r}</span></label>`).join("");
-    const info=$("#memberAutoInfo");if(info)info.innerHTML=p?`현재 추정 티어 <b>${fmt(estimatedTier(p))}</b> · 자동 보정 ${p.rating>=0?"-":"+"}${Math.abs(p.rating).toFixed(2)} · ${recordText(p)}`:"새 멤버는 자동 보정 0에서 시작합니다.";$("#memberDialog").showModal();
+    const info=$("#memberAutoInfo");if(info)info.innerHTML=p?`현재 추정 티어 <b>${fmt(estimatedTier(p))}</b> · 자동 보정 ${tierCorrection(p)<0?"-":"+"}${Math.abs(tierCorrection(p)).toFixed(2)} · ${recordText(p)}`:"새 멤버는 자동 보정 0에서 시작합니다.";$("#memberDialog").showModal();
   }
   function saveMember(){
     const id=$("#memberId").value,name=$("#memberName").value.trim(),baseTier=Number($("#memberTier").value);if(!name||!Number.isFinite(baseTier)){toast("이름과 기준 티어를 확인해주세요.");return false;}

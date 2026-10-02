@@ -12,6 +12,7 @@
   주의: 아래 계수는 Riot 공식 수치가 아니다. 공개된 '역할군 공평성' 방향을
   참고한 내전용 휴리스틱이며, 앱 안에서 모든 기준을 공개한다.
 */
+import { roleTier } from './role-model.js?v=6-tier-20261003';
 const ROLES=["TOP","JG","MID","ADC","SUP"];
 const PRIOR=[1.00,1.08,1.00,0.95];
 const BASE=[11.0,12.0,11.0];
@@ -21,8 +22,6 @@ const BOT_STRONG=.60,BOT_WEAK=.40;
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 const sigmoid=x=>x>30?1:x<-30?0:1/(1+Math.exp(-x));
 const popcount=n=>{let c=0;while(n){c+=n&1;n>>>=1;}return c;};
-function estimatedTier(p){return clamp(Number(p.baseTier??p.tier??3)-Number(p.rating||0),-.5,10);}
-function roleTier(p,role){return clamp(estimatedTier(p)-Number(p.roleRating?.[role]||0),-.5,10);}
 function botDuoIndex(adc,sup){const strong=Math.min(adc,sup),weak=Math.max(adc,sup);return BOT_STRONG*strong+BOT_WEAK*weak;}
 function lanePenalty(gap,baseWeight,cliffWeight,learnedScale){const d=Math.abs(gap);let penalty=baseWeight*learnedScale*d*d;if(d>1)penalty+=cliffWeight*(d-1)*(d-1);return penalty;}
 function learnedScale(model,idx){return clamp(model.weights[idx]/PRIOR[idx],.65,1.45);}

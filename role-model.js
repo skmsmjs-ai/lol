@@ -1,5 +1,8 @@
 // Inner-room comparison heuristic, not Riot MMR or an empirically calibrated skill scale.
 export const MODEL_VERSION = 'role-five-inputs-2026-10-01-v1';
+export const RATING_VERSION = 'tier-sensitivity-2026-10-03-v2';
+// Apply the gain when interpreting stored corrections, so old originals need no replay.
+export const TIER_SENSITIVITY = 2;
 export const ROLES = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
 export const ROLE_KR = { TOP: '탑', JG: '정글', MID: '미드', ADC: '원딜', SUP: '서포터' };
 export const PRIOR = [1, 1.08, 1, .95];
@@ -11,6 +14,21 @@ export const ROLE_RULES = {
   SUP: { growth: .10, participation: .60, efficiency: .30, economy: { gold: .60, cs: 0, level: .40 }, evidence: .25, definition: '팀의 킬에 함께 참여하고 KDA 효율을 유지합니다. CS는 평가하지 않습니다.' }
 };
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+export function estimatedTier(player) {
+  return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * Number(player.rating || 0), -.5, 10);
+}
+export function roleTier(player, role) {
+  return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * (Number(player.rating || 0) + Number(player.roleRating?.[role] || 0)), -.5, 10);
+}
+export function tierCorrection(player) { return estimatedTier(player) - Number(player.baseTier ?? player.tier ?? 3); }
+// Historical points retain their original meaning. Add a display-only current point
+// if a sensitivity change makes the stored last estimate differ from today's estimate.
+export function tierTrendPoints(player) {
+  const points = (player.timeline || []).filter(x => Number.isFinite(Number(x.tier))).map(x => ({...x})).sort((a,b) => new Date(a.time) - new Date(b.time));
+  const last = points.at(-1), current = Number(estimatedTier(player).toFixed(4));
+  if (last && Math.abs(Number(last.tier) - current) > .0001) points.push({time:last.time,tier:current,source:'current-sensitivity',derived:true});
+  return points.slice(-40);
+}
 const sigmoid = x => 1 / (1 + Math.exp(-clamp(x, -30, 30)));
 export function parseDuration(value) {
   if (typeof value !== 'string') return null;
@@ -78,6 +96,8 @@ export function deriveResult(stats, duration, modes = {}) {
   return { modelVersion: MODEL_VERSION, roleAdv, roleObserved, roleEvidenceWeight, roleAdvSource, statAssessment };
 }
 export function applyRatingUpdate(state, record) {
+  record.ratingVersion = RATING_VERSION;
+  record.tierSensitivity = TIER_SENSITIVITY;
   const winnerKnown = record.winner === 'A' || record.winner === 'B';
   const before = [...state.model.weights];
   const y = record.winner === 'A' ? 1 : 0;
@@ -115,7 +135,7 @@ export function applyRatingUpdate(state, record) {
   record.loggedAt ||= new Date().toISOString();
   for (const id of new Set(ROLES.flatMap(r => [record.roles[r].aId, record.roles[r].bId]))) {
     const p = players.get(id); p.timeline ||= [];
-    p.timeline.push({ time: record.loggedAt, tier: Number(clamp(p.baseTier - p.rating, -.5, 10).toFixed(4)), source: record.source || 'live', gameId: record.id });
+    p.timeline.push({ time: record.loggedAt, tier: Number(estimatedTier(p).toFixed(4)), source: record.source || 'live', gameId: record.id, tierSensitivity: TIER_SENSITIVITY });
   }
   state.history.push(record);
 }

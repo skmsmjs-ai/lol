@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
-  <link rel="manifest" href="manifest.webmanifest?v=6-save-20261003">
+  <link rel="manifest" href="manifest.webmanifest?v=6-tier-20261003">
   <link rel="apple-touch-icon" sizes="180x180" href="icon-entry-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-entry-192.png">
-  <link rel="stylesheet" href="styles.css?v=6-save-20261003">
+  <link rel="stylesheet" href="styles.css?v=6-tier-20261003">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -160,8 +160,8 @@
 
         <section class="formula-card">
           <div class="formula-title"><span>5</span><div><strong>선수 티어 자동 보정</strong><p>사람이 정한 기준 티어는 보존하고, 실제 경기에서 별도의 추정값만 움직입니다.</p></div></div>
-          <div class="formula" data-formula="tier-correction"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mtext>추정</mtext></msub><mo>=</mo><msub><mi>T</mi><mtext>기준</mtext></msub><mo>−</mo><msub><mi>R</mi><mtext>전체</mtext></msub></mrow><annotation encoding="application/x-tex">T_{\text{추정}}=T_{\text{기준}}-R_{\text{전체}}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mtext>역할</mtext></msub><mo>=</mo><msub><mi>T</mi><mtext>추정</mtext></msub><mo>−</mo><msub><mi>R</mi><mtext>역할</mtext></msub></mrow><annotation encoding="application/x-tex">T_{\text{역할}}=T_{\text{추정}}-R_{\text{역할}}</annotation></semantics></math></span></div></div><!-- formula-end -->
-          <p class="criteria-note">숫자가 낮을수록 강합니다. 팀 승패는 전체 보정값에, 같은 역할의 수치상 비교는 역할별 보정값에 반영합니다. 예를 들어 기준 3티어 선수가 미드에서 반복해서 더 높은 티어 선수를 앞서면 ‘전체 추정 2.8 / MID 역할 추정 2.5’처럼 변할 수 있습니다. 기준 티어 자체는 사용자가 수정하기 전까지 바뀌지 않습니다.</p>
+          <div class="formula" data-formula="tier-correction"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mtext>추정</mtext></msub><mo>=</mo><mi mathvariant="normal">clip</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>T</mi><mtext>기준</mtext></msub><mo>−</mo><mn>2</mn><msub><mi>R</mi><mtext>전체</mtext></msub><mo separator="true">,</mo><mo>−</mo><mn>0.5</mn><mo separator="true">,</mo><mn>10</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">T_{\text{추정}}=\operatorname{clip}(T_{\text{기준}}-2R_{\text{전체}},-0.5,10)</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mtext>역할</mtext></msub><mo>=</mo><mi mathvariant="normal">clip</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>T</mi><mtext>기준</mtext></msub><mo>−</mo><mn>2</mn><mo stretchy="false">(</mo><msub><mi>R</mi><mtext>전체</mtext></msub><mo>+</mo><msub><mi>R</mi><mtext>역할</mtext></msub><mo stretchy="false">)</mo><mo separator="true">,</mo><mo>−</mo><mn>0.5</mn><mo separator="true">,</mo><mn>10</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">T_{\text{역할}}=\operatorname{clip}(T_{\text{기준}}-2(R_{\text{전체}}+R_{\text{역할}}),-0.5,10)</annotation></semantics></math></span></div></div><!-- formula-end -->
+          <p class="criteria-note">숫자가 낮을수록 강합니다. 현재 티어 민감도는 2배로, 기존 전적과 새 전적의 자동 보정값을 두 배로 반영합니다. 팀 승패는 전체 보정값에, 같은 역할의 수치상 비교는 역할별 보정값에 반영합니다. 예를 들어 기준 3티어 선수가 미드에서 반복해서 더 높은 티어 선수를 앞서면 ‘전체 추정 2.8 / MID 역할 추정 2.5’처럼 변할 수 있습니다. 기준 티어 자체는 사용자가 수정하기 전까지 바뀌지 않습니다.</p>
         </section>
 
         <section class="card live-model-card">
@@ -370,6 +370,6 @@
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=6-save-20261003"></script>
+  <script type="module" src="app.js?v=6-tier-20261003"></script>
 </body>
 </html>
