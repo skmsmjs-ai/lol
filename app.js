@@ -426,7 +426,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue } from './ent
     if(!validateEntry('live',resultDraft.stats))return;
     const c=currentPlans[activePlanIndex];if(!c)return;const roles=resultDraft.roles,resolved=resolveStatResult(resultDraft.mode,resultDraft.stats,durationFor('live'));
     const record={id:resultDraft.id||`g-${crypto.randomUUID()}`,time:new Date().toISOString(),source:'live',plan:activePlanIndex+1,winner:resultDraft.winner,duration:durationFor('live'),predictedAWin:c.predictedAWin,feature:[...c.feature],roles,stats:clone(resultDraft.stats),...resolved};
-    resultDraft.id=record.id;persistGameDraft('live');
+    resultDraft.id=record.id;persistGameDraft('live');clearTimeout(persistGameDraft.timer);
     const button=$('#saveResultBtn');setEntryBusy('live',true);button.textContent='저장 중…';
     const previousDraft=state.activeDraft;state.activeDraft=null;
     try{await commitGame(record);clearGameDraft('live');$('#resultDialog').close();renderAll();currentPlans=[];$('#resultSection').classList.add('hidden');toast('경기 기록을 저장했습니다.');}
@@ -476,7 +476,6 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue } from './ent
     $("#memberForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel"){e.submitter.form.noValidate=true;return;}e.submitter.form.noValidate=false;if(!saveMember()){e.preventDefault();return;}});
     $("#groupForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel"){e.submitter.form.noValidate=true;return;}e.submitter.form.noValidate=false;if(!saveGroup()){e.preventDefault();return;}});
     $$(".winner-choice").forEach(b=>b.onclick=()=>{resultDraft.winner=resultDraft.winner===b.dataset.winner?null:b.dataset.winner;$$('.winner-choice').forEach(x=>x.classList.toggle('active',x.dataset.winner===resultDraft.winner));persistGameDraft('live');});
-    $("#saveResultBtn").onclick=saveLiveResult;
     $('#resultForm').addEventListener('submit',e=>{e.preventDefault();if(!$('#saveResultBtn').disabled)saveLiveResult();});
     $('#resultForm button[value=cancel]').onclick=()=>{persistGameDraft('live');$('#resultDialog').close();};
     for(const prefix of ['live','past'])$(`#${prefix==='live'?'result':'past'}Dialog`).addEventListener('cancel',e=>{if(busyEntryControls.has(prefix))e.preventDefault();else persistGameDraft(prefix);});
