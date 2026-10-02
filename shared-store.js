@@ -1,4 +1,4 @@
-import { cloudEndpoint } from './cloud-config.js?v=6-tier-20261003';
+import { cloudEndpoint } from './cloud-config.js?v=6-edit7-20261003';
 const $ = selector => document.querySelector(selector);
 const clone = value => value===undefined?undefined:JSON.parse(JSON.stringify(value));
 const shared = state => { const value=clone(state); delete value.session; return value; };
@@ -120,6 +120,17 @@ export class SharedStore {
   async refresh() {
     if(!this.role||this.pending||this.saving||document.querySelector('dialog[open]')||document.activeElement?.matches('input,textarea,select'))return;
     try{const data=await this.request('state');if(data.revision!==this.revision){this.base=data.state;this.revision=data.revision;this.setState(data.state);this.status('다른 사람의 새 기록을 불러왔습니다');}}catch(error){if(error.status===401)this.gate();}
+  }
+  async editRecord(edit){
+    if(this.pending||this.saving)throw new Error('상단의 기존 입력 저장이 끝난 뒤 수정해 주세요. 수정 초안은 보존했습니다.');
+    if(!this.role)throw new Error('다시 입장한 뒤 수정 내용을 저장해 주세요.');
+    this.saving=true;this.status('전적 수정과 티어를 저장 중');
+    try{
+      const current=await this.request('state');
+      const data=await this.request('records/edit','POST',{...edit,revision:current.revision});
+      this.base=data.state;this.revision=data.revision;this.setState(data.state);this.cache();this.status('전적 수정이 서버에 저장됨 · 다른 기기에서도 불러옵니다');return data.state;
+    }catch(error){this.status('전적 수정을 저장하지 못했습니다 · 수정 초안은 기기에 보관했습니다');throw error;}
+    finally{this.saving=false;this.saveWaiters.splice(0).forEach(resolve=>resolve());}
   }
   download(value,name){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));a.href=url;a.download=`내전_${name}_${Date.now()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   async reset(){

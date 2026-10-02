@@ -120,6 +120,7 @@ input[aria-invalid=true]{border-color:var(--bad)}.field input{width:100%;padding
 .section-head p:not(.eyebrow),.empty-note,.history-sub,.history-date,.criteria-note,.formula-notes p,.formula-title p,.evidence-list li,.honesty-box{font-size:14px}
 .team-names,.role-tag,.team-label,.metric small,.nav-btn small,.stat-role-head i{font-size:12px}.metric strong{font-size:15px}
 .detail-summary-grid small,.detail-section-head p,.role-detail-row small,.player-game-row small{font-size:12px}.role-detail-row b,.player-game-row strong{font-size:14px}
+.player-game-row{grid-template-columns:30px minmax(0,1fr) auto}.player-game-row>div{min-width:0;overflow-wrap:anywhere}.history-item>.secondary-btn{margin-top:12px}#recordEditHistory{margin:12px 0;overflow-wrap:anywhere}#recordEditHistory p{font-size:13px;line-height:1.6;margin:10px 0}@media(max-width:600px){.player-game-row{grid-template-columns:30px minmax(0,1fr)}.player-game-row>button{grid-column:2;justify-self:start}}
 @media(max-width:430px){.stat-compact-row,.stat-side-labels{grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:360px){.triple-input{grid-template-columns:1fr}.triple-input input{min-height:44px}}
 

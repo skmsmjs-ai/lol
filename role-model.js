@@ -1,8 +1,8 @@
 // Inner-room comparison heuristic, not Riot MMR or an empirically calibrated skill scale.
 export const MODEL_VERSION = 'role-five-inputs-2026-10-01-v1';
-export const RATING_VERSION = 'tier-sensitivity-2026-10-03-v2';
+export const RATING_VERSION = 'tier-sensitivity-2026-10-03-v4';
 // Apply the gain when interpreting stored corrections, so old originals need no replay.
-export const TIER_SENSITIVITY = 2;
+export const TIER_SENSITIVITY = 7;
 export const ROLES = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
 export const ROLE_KR = { TOP: '탑', JG: '정글', MID: '미드', ADC: '원딜', SUP: '서포터' };
 export const PRIOR = [1, 1.08, 1, .95];

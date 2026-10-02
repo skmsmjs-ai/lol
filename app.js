@@ -1,6 +1,6 @@
-import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate, estimatedTier, roleTier, tierCorrection, tierTrendPoints } from './role-model.js?v=6-tier-20261003';
-import { SharedStore, mergeDocuments } from './shared-store.js?v=6-tier-20261003';
-import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInput } from './entry-input.js?v=6-tier-20261003';
+import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate, estimatedTier, roleTier, tierCorrection, tierTrendPoints } from './role-model.js?v=6-edit7-20261003';
+import { SharedStore, mergeDocuments } from './shared-store.js?v=6-edit7-20261003';
+import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInput } from './entry-input.js?v=6-edit7-20261003';
 (() => {
   const PRIOR = [1.00,1.08,1.00,0.95]; // TOP, JG, MID, BOT
   const STORAGE_KEY = "naejun_matchmaker_web_v1"; // v2와 동일: 기존 데이터 이어받기
@@ -116,6 +116,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
   let activeDetailId=null;
   let liveServerBase=null;
   let historyLimit=50;
+  let pastEditing=null;
 
   const playerById=id=>state.roster.find(p=>p.id===id);
   const selectedPlayers=()=>state.session.selectedIds.map(playerById).filter(Boolean);
@@ -174,9 +175,9 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     }
   }
   function resolveStatResult(modeObj,statsObj,duration){return deriveResult(statsObj,duration,modeObj);}
-  function draftKey(prefix){return `naejun_game_draft_v6_${prefix}`;}
+  function draftKey(prefix){return prefix==='past'&&pastEditing?`naejun_game_edit_v6_${pastEditing.recordId}`:`naejun_game_draft_v6_${prefix}`;}
   function persistGameDraft(prefix){
-    try { const draft=prefix==='live'?{...resultDraft,roles:resultDraft.roles,duration:durationFor(prefix)}:{id:window._pastRecordId,stats:window._pastStats,mode:window._pastMode,duration:durationFor(prefix),winner:$('#pastWinner').value,date:$('#pastDate').value,roles:pastRoleMapFromSelectors(false).roleMap};localStorage.setItem(draftKey(prefix),JSON.stringify(draft));if(prefix==='live')$('#resumeDraftBtn').hidden=false;
+    try { const draft=prefix==='live'?{...resultDraft,roles:resultDraft.roles,duration:durationFor(prefix)}:{id:window._pastRecordId,editing:pastEditing,stats:window._pastStats,mode:window._pastMode,duration:durationFor(prefix),winner:$('#pastWinner').value,date:$('#pastDate').value,roles:pastRoleMapFromSelectors(false).roleMap};localStorage.setItem(draftKey(prefix),JSON.stringify(draft));if(prefix==='live')$('#resumeDraftBtn').hidden=false;
       if(prefix==='live'&&sharedStore?.enabled){state.activeDraft={...clone(draft),id:resultDraft.id};clearTimeout(persistGameDraft.timer);persistGameDraft.timer=setTimeout(()=>save(),600);}
     }
     catch { $('#saveStatus').textContent='초안을 기기에 저장하지 못했습니다 · 입력은 화면에 남아 있습니다'; }
@@ -281,9 +282,10 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     const sorted=[...state.roster].sort((a,b)=>estimatedTier(a)-estimatedTier(b)||comparePlayerNames(a,b)),rank=sorted.findIndex(x=>x.id===id)+1;
     const games=p.stats.games||0,knownGames=(p.stats.wins||0)+(p.stats.losses||0),winRate=knownGames?100*(p.stats.wins||0)/knownGames:0,rs=detailRoleStats(p),matches=playerMatchRows(p);
     const roleCards=ROLES.map(r=>{const st=rs[r],wr=(st.wins+st.losses)?100*st.wins/(st.wins+st.losses):0,possible=p.possible[r];return `<div class="role-detail-row ${possible?"":"role-disabled"}"><div><strong>${r}</strong><small>${possible?"현재 역할 추정":"현재 배치 불가"}</small></div><div class="role-detail-tier">${possible?fmt(roleTier(p,r)):"—"}</div><div><b>${st.games}경기</b><small>${(st.wins+st.losses)?`${wr.toFixed(0)}% 승률`:"승패 미기록"}</small></div><div><b>${st.better}/${st.even}/${st.worse}</b><small>우세/비슷/열세</small></div></div>`;}).join("");
-    const recent=matches.slice(0,8).map(x=>`<div class="player-game-row"><span class="wl ${x.won===null?"unknown":x.won?"win":"loss"}">${x.won===null?"?":x.won?"W":"L"}</span><div><strong>${x.role} vs ${escapeHtml(x.opponentName)}</strong><small>${new Date(x.record.time).toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})} · 수치 ${x.lane} · ${x.record.source==="past"?"지난 전적":"실시간"}</small></div></div>`).join("")||'<div class="empty-note">기록된 경기가 없습니다.</div>';
+    const recent=matches.slice(0,8).map(x=>`<div class="player-game-row"><span class="wl ${x.won===null?"unknown":x.won?"win":"loss"}">${x.won===null?"?":x.won?"W":"L"}</span><div><strong>${x.role} vs ${escapeHtml(x.opponentName)}</strong><small>${new Date(x.record.time).toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})} · 수치 ${x.lane} · ${x.record.source==="past"?"지난 전적":"실시간"}</small></div><button type="button" class="secondary-btn" data-edit-record="${escapeHtml(x.record.id)}">전적 수정</button></div>`).join("")||'<div class="empty-note">기록된 경기가 없습니다.</div>';
     const autoDelta=tierCorrection(p);
-    $("#playerDetailContent").innerHTML=`<div class="player-detail-hero"><div><p class="eyebrow">PLAYER PROFILE</p><h2>${escapeHtml(p.name)}</h2><p>전체 ${rank}위 · 가능 ${escapeHtml(possibleText(p))}</p></div><div class="detail-tier-orb"><span>추정</span><b>${fmt(estimatedTier(p))}</b></div></div><div class="detail-summary-grid"><div><small>기준 티어</small><b>${fmt(p.baseTier)}</b></div><div><small>자동 보정</small><b>${autoDelta>=0?"+":""}${autoDelta.toFixed(2)}</b></div><div><small>전적</small><b>${games?`${p.stats.wins}승 ${p.stats.losses}패`:"—"}</b></div><div><small>승률</small><b>${knownGames?`${winRate.toFixed(0)}%`:"—"}</b></div></div><section class="player-detail-section"><div class="detail-section-head"><div><h3>추정 티어 변화</h3><p>과거 점은 당시 추정치이며, 마지막 점은 현재 민감도 2배를 반영합니다.</p></div></div>${tierTrendSvg(p)}</section><section class="player-detail-section"><div class="detail-section-head"><div><h3>포지션별 기록</h3><p>현재 역할 추정치와 수치상 비교 기록을 함께 봅니다.</p></div></div><div class="role-detail-list">${roleCards}</div></section><section class="player-detail-section"><div class="detail-section-head"><div><h3>최근 경기</h3><p>최근 8경기에서 맡은 역할과 상대, 라인 판정입니다.</p></div></div><div class="player-game-list">${recent}</div></section>`;
+    $("#playerDetailContent").innerHTML=`<div class="player-detail-hero"><div><p class="eyebrow">PLAYER PROFILE</p><h2>${escapeHtml(p.name)}</h2><p>전체 ${rank}위 · 가능 ${escapeHtml(possibleText(p))}</p></div><div class="detail-tier-orb"><span>추정</span><b>${fmt(estimatedTier(p))}</b></div></div><div class="detail-summary-grid"><div><small>기준 티어</small><b>${fmt(p.baseTier)}</b></div><div><small>자동 보정</small><b>${autoDelta>=0?"+":""}${autoDelta.toFixed(2)}</b></div><div><small>전적</small><b>${games?`${p.stats.wins}승 ${p.stats.losses}패`:"—"}</b></div><div><small>승률</small><b>${knownGames?`${winRate.toFixed(0)}%`:"—"}</b></div></div><section class="player-detail-section"><div class="detail-section-head"><div><h3>추정 티어 변화</h3><p>과거 점은 당시 추정치이며, 마지막 점은 현재 민감도 7배를 반영합니다.</p></div></div>${tierTrendSvg(p)}</section><section class="player-detail-section"><div class="detail-section-head"><div><h3>포지션별 기록</h3><p>현재 역할 추정치와 수치상 비교 기록을 함께 봅니다.</p></div></div><div class="role-detail-list">${roleCards}</div></section><section class="player-detail-section"><div class="detail-section-head"><div><h3>최근 경기</h3><p>최근 8경기에서 맡은 역할과 상대, 라인 판정입니다.</p></div></div><div class="player-game-list">${recent}</div></section>`;
+    $$('#playerDetailContent [data-edit-record]').forEach(button=>button.onclick=()=>{$('#playerDetailDialog').close();openPastDialog(button.dataset.editRecord);});
     $("#playerDetailEditBtn").onclick=()=>{$("#playerDetailDialog").close();openMemberDialog(id);};
     $("#playerDetailDialog").showModal();
   }
@@ -305,8 +307,9 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     $("#historyList").innerHTML=items.length?items.map(h=>{
       const adv=h.roleAdv?ROLES.map(r=>{const src=h.roleAdvSource?.[r]==="stats"||h.roleAdvSource?.[r]==="five-inputs"?"수치":"";const sc=Number(h.statAssessment?.[r]?.score);return `${r} ${advShort(h.roleAdv[r]||"U")}${src&&Number.isFinite(sc)?`(${sc>=0?"+":""}${sc.toFixed(2)})`:""}`;}).join(" · "):"포지션 우세 미기록";
       const source=h.source==="past"?"지난 전적":"실시간";
-      return `<div class="history-item"><div class="history-top"><div class="history-title">${h.plan?`${h.plan}안 · `:""}${h.winner?`${h.winner}팀 승리`:"승패 미기록"} <span class="history-source">${source}</span></div><div class="history-date">${new Date(h.time).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div><div class="history-sub">${adv}</div><div class="history-sub">당시 모형 A ${(Number(h.predictedAWin??.5)*100).toFixed(1)}% : B ${((1-Number(h.predictedAWin??.5))*100).toFixed(1)}%</div></div>`;
+      return `<div class="history-item"><div class="history-top"><div class="history-title">${h.plan?`${h.plan}안 · `:""}${h.winner?`${h.winner}팀 승리`:"승패 미기록"} <span class="history-source">${source}</span></div><div class="history-date">${new Date(h.time).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div></div><div class="history-sub">${adv}</div><div class="history-sub">당시 모형 A ${(Number(h.predictedAWin??.5)*100).toFixed(1)}% : B ${((1-Number(h.predictedAWin??.5))*100).toFixed(1)}%</div><div class="history-sub">${ROLES.map(r=>`${ROLE_KR[r]}: ${escapeHtml(h.roles?.[r]?.aName||"미확인")} / ${escapeHtml(h.roles?.[r]?.bName||"미확인")}`).join(" · ")}</div><button type="button" class="secondary-btn" data-edit-record="${escapeHtml(h.id)}">전적 수정</button></div>`;
     }).join(""):'<div class="empty-note">아직 기록한 경기가 없습니다.</div>';
+    $$('#historyList [data-edit-record]').forEach(button=>button.onclick=()=>openPastDialog(button.dataset.editRecord));
     $('#historyMoreBtn').hidden=state.history.length<=historyLimit;
   }
 
@@ -342,7 +345,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
   }
 
   function showLoading(show,text="가능한 조합을 계산하고 있습니다…"){let el=$("#loadingOverlay");if(show){if(!el){el=document.createElement("div");el.id="loadingOverlay";el.className="loading-overlay";el.innerHTML=`<div class="loading-box"><div class="spinner"></div><strong>${escapeHtml(text)}</strong><p class="muted" style="font-size:12px;margin-top:6px">현재 추정 티어·역할 숙련·고정팀 조건까지 전수 비교합니다.</p></div>`;document.body.appendChild(el);}}else el?.remove();}
-  function generate(){if(state.session.selectedIds.length!==10)return;showLoading(true);if(worker)worker.terminate();worker=new Worker("matcher-worker.js?v=6-tier-20261003",{type:"module"});worker.onmessage=e=>{if(e.data.progress)return;showLoading(false);if(e.data.error){toast(e.data.error);return;}currentPlans=e.data.plans||[];renderPlans();if(!currentPlans.length)toast("현재 조건으로 가능한 정상 배치가 없습니다.");};worker.onerror=()=>{showLoading(false);toast("계산 중 오류가 발생했습니다.");};worker.postMessage({players:selectedPlayers(),model:state.model,fixedGroups:state.session.fixedGroups});}
+  function generate(){if(state.session.selectedIds.length!==10)return;showLoading(true);if(worker)worker.terminate();worker=new Worker("matcher-worker.js?v=6-edit7-20261003",{type:"module"});worker.onmessage=e=>{if(e.data.progress)return;showLoading(false);if(e.data.error){toast(e.data.error);return;}currentPlans=e.data.plans||[];renderPlans();if(!currentPlans.length)toast("현재 조건으로 가능한 정상 배치가 없습니다.");};worker.onerror=()=>{showLoading(false);toast("계산 중 오류가 발생했습니다.");};worker.postMessage({players:selectedPlayers(),model:state.model,fixedGroups:state.session.fixedGroups});}
 
   function openMemberDialog(id=null){
     const p=id?playerById(id):null;$("#memberId").value=p?.id||"";$("#memberName").value=p?.name||"";$("#memberTier").value=p?.baseTier??3;$("#memberDialogTitle").textContent=p?"멤버 수정":"새 멤버 추가";$("#memberDialogEyebrow").textContent=p?"EDIT PLAYER":"NEW PLAYER";
@@ -429,7 +432,12 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     resultDraft.id=record.id;persistGameDraft('live');clearTimeout(persistGameDraft.timer);
     const button=$('#saveResultBtn');setEntryBusy('live',true);button.textContent='저장 중…';
     const previousDraft=state.activeDraft;state.activeDraft=null;
-    try{await commitGame(record);clearGameDraft('live');$('#resultDialog').close();renderAll();currentPlans=[];$('#resultSection').classList.add('hidden');toast('경기 기록을 저장했습니다.');}
+    try{if(pastEditing){
+      const input={id:pastEditing.recordId,time:record.time,winner:record.winner,duration:record.duration,roles:Object.fromEntries(ROLES.map(r=>[r,{aId:record.roles[r].aId,bId:record.roles[r].bId}])),stats:record.stats,roleAdv:record.roleAdv};
+      const request={...pastEditing,input};
+      if(sharedStore?.enabled)await sharedStore.editRecord(request);
+      else{const {editRecord}=await import('./record-edits.js?v=6-edit7-20261003');const previous=state;state=editRecord(state,request,'participant');if(!save()){state=previous;throw new Error('기기에 저장하지 못했습니다. 수정 초안은 보존했습니다.');}}
+    }else await commitGame(record);clearGameDraft('live');$('#resultDialog').close();renderAll();currentPlans=[];$('#resultSection').classList.add('hidden');toast('경기 기록을 저장했습니다.');}
     catch(error){state.activeDraft=previousDraft;entryError('live',error.message);}
     finally{setEntryBusy('live',false);button.textContent='경기 기록 저장 · 학습';}
   }
@@ -437,16 +445,34 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
   function pastRoleMapFromSelectors(requireAll=false){
     const roleMap={},ids=[];for(const r of ROLES){const aId=$(`#pastA-${r}`)?.value||"",bId=$(`#pastB-${r}`)?.value||"";if(requireAll&&(!aId||!bId))return null;roleMap[r]={aId,bId,aName:playerById(aId)?.name||"선수 선택 전",bName:playerById(bId)?.name||"선수 선택 전",aTier:aId?roleTier(playerById(aId),r):3,bTier:bId?roleTier(playerById(bId),r):3};if(aId)ids.push(aId);if(bId)ids.push(bId);}return {roleMap,ids};
   }
-  function openPastDialog(){
+  function openPastDialog(recordId=null){
+    const original=recordId?state.history.find(h=>h.id===recordId):null;
+    if(recordId&&(!original||validateGameStats(original.stats,original.duration))){toast('이 전적은 원본 경기 수치가 부족하여 수정할 수 없습니다. 원본 백업을 확인해 주세요.');return;}
+    pastEditing=original?{recordId:original.id,editId:`edit-${crypto.randomUUID()}`,expectedRecord:clone(original)}:null;
+    $('#pastDialogTitle').textContent=original?'전적 수정':'지난 전적 입력';
+    $('#pastDialogText').textContent=original?'역할군을 바꾸면 같은 팀의 두 선수와 수치를 함께 교환합니다. 저장하면 이 경기부터 이후 티어 보정을 다시 계산하고 수정 전 기록을 보관합니다.':'예전 경기의 10명과 결과 수치를 직접 입력합니다. 여러 경기를 넣을 때는 가능하면 오래된 경기부터 입력하세요.';
+    $('#savePastBtn').textContent=original?'수정 저장 · 티어 다시 계산':'지난 전적 저장 · 학습';
+    const edits=original?(state.recordEdits||[]).filter(e=>e.recordId===original.id):[];
+    $('#recordEditHistory').hidden=!edits.length;
+    $('#recordEditHistory').innerHTML=edits.length?`<details><summary>수정 이력 ${edits.length}건</summary>${edits.slice().reverse().map(e=>`<p>${escapeHtml(new Date(e.time).toLocaleString('ko-KR'))} · 수정 전: ${ROLES.map(r=>`${ROLE_KR[r]} ${escapeHtml(e.before.history[0].roles[r].aName)} / ${escapeHtml(e.before.history[0].roles[r].bName)}`).join(' · ')}</p>`).join('')}</details>`:'';
     const sorted=[...state.roster].sort(comparePlayerNames),options='<option value="">선택</option>'+sorted.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (추정 ${fmt(estimatedTier(p))})</option>`).join("");
     $("#pastRows").innerHTML=ROLES.map(r=>`<div class="past-row"><strong>${r}</strong><select id="pastA-${r}" class="past-select" aria-label="${ROLE_KR[r]} A팀 선수">${options}</select><span class="vs">VS</span><select id="pastB-${r}" class="past-select" aria-label="${ROLE_KR[r]} B팀 선수">${options}</select></div>`).join("");
+    if(original)for(const side of ['A','B']){const teamIds=new Set(ROLES.map(r=>original.roles[r][side==='A'?'aId':'bId']));for(const r of ROLES)for(const option of $(`#past${side}-${r}`).options)option.disabled=!teamIds.has(option.value);}
     const now=new Date(),local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);$("#pastDate").value=local;$("#pastWinner").value="";$("#pastDuration").value="";
     window._pastMode=Object.fromEntries(ROLES.map(r=>[r,"S"]));window._pastStats=Object.fromEntries(ROLES.map(r=>[r,{A:emptyGameStat(),B:emptyGameStat()}]));
-    const draft=readGameDraft('past');window._pastRecordId=draft?.id||`past-${crypto.randomUUID()}`;clearEntryError('past');
+    const stored=readGameDraft('past');const draft=stored||(original?{id:original.id,stats:clone(original.stats),mode:Object.fromEntries(ROLES.map(r=>[r,original.roleAdv?.[r]==='U'?'U':'S'])),duration:original.duration,winner:original.winner,roles:original.roles,date:new Date(new Date(original.time).getTime()-new Date(original.time).getTimezoneOffset()*60000).toISOString().slice(0,16)}:null);if(stored?.editing)pastEditing=stored.editing;window._pastRecordId=draft?.id||`past-${crypto.randomUUID()}`;clearEntryError('past');
     if(draft?.roles){window._pastMode=draft.mode;window._pastStats=draft.stats;$('#pastDuration').value=draft.duration||'';$('#pastWinner').value=draft.winner||'';$('#pastDate').value=draft.date||local;for(const r of ROLES){$(`#pastA-${r}`).value=draft.roles[r].aId;$(`#pastB-${r}`).value=draft.roles[r].bId;}}
     const byPlayer=new Map();for(const r of ROLES)for(const side of ['A','B']){const id=$(`#past${side}-${r}`).value;if(id)byPlayer.set(id,clone(window._pastStats[r][side]));}
     const refreshPast=()=>{const got=pastRoleMapFromSelectors(false);renderStatEntry("#pastStatEntry","past",got.roleMap,window._pastMode,window._pastStats);};
-    refreshPast();$$('#pastRows select').forEach(el=>{let previous=el.value;el.addEventListener('change',()=>{collectStatsFromDom('past',window._pastStats,false);const match=el.id.match(/^past([AB])-(.+)$/),side=match[1],r=match[2];if(previous)byPlayer.set(previous,clone(window._pastStats[r][side]));window._pastStats[r][side]=clone(byPlayer.get(el.value)||emptyGameStat());previous=el.value;refreshPast();persistGameDraft('past');});});$("#pastDialog").showModal();
+    refreshPast();$$('#pastRows select').forEach(el=>{el.dataset.previous=el.value;el.addEventListener('change',()=>{
+      collectStatsFromDom('past',window._pastStats,false);
+      for(const r of ROLES)for(const side of ['A','B']){const selector=$(`#past${side}-${r}`),id=selector.dataset.previous;if(id)byPlayer.set(id,clone(window._pastStats[r][side]));}
+      const side=el.id.match(/^past([AB])-/)[1],previous=el.dataset.previous;
+      if(pastEditing){const other=$$('#pastRows select').find(s=>s!==el&&s.id.startsWith(`past${side}-`)&&s.value===el.value);if(other)other.value=previous;}
+      for(const r of ROLES)for(const team of ['A','B']){const selector=$(`#past${team}-${r}`);window._pastStats[r][team]=clone(byPlayer.get(selector.value)||emptyGameStat());selector.dataset.previous=selector.value;}
+      refreshPast();persistGameDraft('past');
+    });});$('#pastDialog').showModal();
+
   }
   async function savePastMatch(){
     collectStatsFromDom('past',window._pastStats,false);clearEntryError('past');
@@ -458,12 +484,18 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     const date=$('#pastDate').value;
     if(date&&!Number.isFinite(new Date(date).getTime()))return entryError('past','경기 시각을 확인하거나 비워 주세요.',$('#pastDate'));
     const winner=$('#pastWinner').value||null,pred=predictFeatureFromRoles(roleMap),resolved=resolveStatResult(window._pastMode,window._pastStats,durationFor('past'));
-    const record={id:window._pastRecordId,time:date?new Date(date).toISOString():new Date().toISOString(),source:'past',plan:null,winner,duration:durationFor('past'),predictedAWin:pred.predictedAWin,feature:pred.feature,roles:roleMap,stats:clone(window._pastStats),...resolved};
+    const unchangedEditDate=pastEditing?new Date(new Date(pastEditing.expectedRecord.time).getTime()-new Date(pastEditing.expectedRecord.time).getTimezoneOffset()*60000).toISOString().slice(0,16):null;
+    const record={id:window._pastRecordId,time:pastEditing&&(!date||date===unchangedEditDate)?pastEditing.expectedRecord.time:date?new Date(date).toISOString():new Date().toISOString(),source:'past',plan:null,winner,duration:durationFor('past'),predictedAWin:pred.predictedAWin,feature:pred.feature,roles:roleMap,stats:clone(window._pastStats),...resolved};
     persistGameDraft('past');
     const button=$('#savePastBtn');setEntryBusy('past',true);button.textContent='저장 중…';
-    try{await commitGame(record);clearGameDraft('past');$('#pastDialog').close();renderAll();toast('지난 전적을 저장했습니다.');return true;}
+    try{if(pastEditing){
+      const input={id:pastEditing.recordId,time:record.time,winner:record.winner,duration:record.duration,roles:record.roles,stats:record.stats,roleAdv:record.roleAdv};
+      const request={...pastEditing,input};
+      if(sharedStore?.enabled)await sharedStore.editRecord(request);
+      else{const {editRecord}=await import('./record-edits.js?v=6-edit7-20261003');const previous=state;state=editRecord(state,request,'participant');if(!save()){state=previous;throw new Error('기기에 저장하지 못했습니다. 수정 초안은 보존했습니다.');}}
+    }else await commitGame(record);clearGameDraft('past');$('#pastDialog').close();renderAll();currentPlans=[];$('#resultSection').classList.add('hidden');toast(pastEditing?'전적 수정과 티어를 저장했습니다.':'지난 전적을 저장했습니다.');pastEditing=null;return true;}
     catch(error){return entryError('past',error.message);}
-    finally{setEntryBusy('past',false);button.textContent='지난 전적 저장 · 학습';}
+    finally{setEntryBusy('past',false);button.textContent=pastEditing?'수정 저장 · 티어 다시 계산':'지난 전적 저장 · 학습';}
   }
 
   function exportData(){state.lastBackup=new Date().toISOString();save();const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`내전자동매칭기_백업_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);toast("백업 파일을 만들었습니다.");}
@@ -479,7 +511,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
     $('#resultForm').addEventListener('submit',e=>{e.preventDefault();if(!$('#saveResultBtn').disabled)saveLiveResult();});
     $('#resultForm button[value=cancel]').onclick=()=>{persistGameDraft('live');$('#resultDialog').close();};
     for(const prefix of ['live','past'])$(`#${prefix==='live'?'result':'past'}Dialog`).addEventListener('cancel',e=>{if(busyEntryControls.has(prefix))e.preventDefault();else persistGameDraft(prefix);});
-    $("#addPastBtn").onclick=openPastDialog;$('#pastForm').addEventListener('submit',e=>{e.preventDefault();if(!$('#savePastBtn').disabled)savePastMatch();});$$('#pastForm button[value=cancel]').forEach(button=>button.onclick=()=>{persistGameDraft('past');$('#pastDialog').close();});
+    $("#addPastBtn").onclick=()=>openPastDialog();$('#pastForm').addEventListener('submit',e=>{e.preventDefault();if(!$('#savePastBtn').disabled)savePastMatch();});$$('#pastForm button[value=cancel]').forEach(button=>button.onclick=()=>{persistGameDraft('past');$('#pastDialog').close();});
     $("#exportBtn").onclick=exportData;$("#importInput").onchange=e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value="";};
     $("#resetBtn").onclick=async()=>{if(sharedStore?.enabled){await sharedStore.reset();return;}if(confirm("백업 파일을 먼저 만든 뒤 멤버·경기 기록을 초기화할까요?")){exportData();state=defaultState();save();currentPlans=[];renderAll();$("#resultSection").classList.add("hidden");toast("초기화했습니다.");}};
     $('#sharedDraftBtn').onclick=()=>resumeRoles(state.activeDraft);
