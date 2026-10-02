@@ -25,3 +25,11 @@ export function firstStatIssue(stats) {
   }
   return null;
 }
+
+// A pending record keeps its ID; retries must never silently discard edited inputs.
+export function sameGameInput(a,b) {
+  if(a.duration!==b.duration||a.winner!==b.winner)return false;
+  return ROLES.every(r=>['aId','bId'].every(k=>a.roles?.[r]?.[k]===b.roles?.[r]?.[k])
+    &&(a.roleAdv?.[r]==='U')===(b.roleAdv?.[r]==='U')
+    &&['A','B'].every(side=>['level','k','d','a','cs','gold'].every(k=>a.stats?.[r]?.[side]?.[k]===b.stats?.[r]?.[side]?.[k])));
+}

@@ -1,6 +1,6 @@
 import { ROLES, ROLE_KR, MODEL_VERSION, ROLE_RULES, parseDuration, validateGameStats, assessRole, deriveResult, applyRatingUpdate } from './role-model.js?v=6-save-20261003';
 import { SharedStore, mergeDocuments } from './shared-store.js?v=6-save-20261003';
-import { comparePlayerNames, normalizeGameDuration, firstStatIssue } from './entry-input.js?v=6-save-20261003';
+import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInput } from './entry-input.js?v=6-save-20261003';
 (() => {
   const PRIOR = [1.00,1.08,1.00,0.95]; // TOP, JG, MID, BOT
   const STORAGE_KEY = "naejun_matchmaker_web_v1"; // v2와 동일: 기존 데이터 이어받기
@@ -418,7 +418,9 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue } from './ent
     else{for(const [el,disabled] of busyEntryControls.get(prefix)||[])el.disabled=disabled;busyEntryControls.delete(prefix);}
   }
   async function commitGame(record){
-    if(!state.history.some(h=>h.id===record.id))applyRatingUpdate(state,record);
+    const existing=state.history.find(h=>h.id===record.id);
+    if(existing&&!sameGameInput(existing,record))throw new Error('이 경기의 이전 입력이 저장 대기 중이거나 이미 저장되었습니다. 상단에서 저장 상태를 확인해 주세요. 바꾼 입력은 초안에 보관했습니다.');
+    if(!existing)applyRatingUpdate(state,record);
     if(sharedStore?.enabled){await sharedStore.saveConfirmed(state);}
     else if(!save())throw new Error('기기에 저장하지 못했습니다. 입력을 보존했으니 다시 시도해 주세요.');
   }
