@@ -1,4 +1,4 @@
-import { cloudEndpoint } from './cloud-config.js?v=6-entry-layout-20261001';
+import { cloudEndpoint } from './cloud-config.js?v=6-save-20261003';
 const $ = selector => document.querySelector(selector);
 const clone = value => value===undefined?undefined:JSON.parse(JSON.stringify(value));
 const shared = state => { const value=clone(state); delete value.session; return value; };
@@ -30,7 +30,7 @@ export function mergeDocuments(base, local, remote) {
   return merge(base,local,remote,'자료');
 }
 export class SharedStore {
-  constructor(options) {Object.assign(this,options);this.enabled=false;this.pending=null;this.base=null;this.revision=0;this.saving=false;this.role=null;this.blocked=false;this.endpoint=options.endpoint??cloudEndpoint;if(this.endpoint&&!/^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/lol-room$/.test(this.endpoint))throw new Error('Supabase 연결 주소를 확인해 주세요.');this.cacheKey=this.endpoint?`naejun_shared_pending_v6:${this.endpoint}`:'naejun_shared_pending_v6';this.tokenKey=`naejun_cloud_session_v6:${this.endpoint}`;}
+  constructor(options) {Object.assign(this,options);this.enabled=false;this.pending=null;this.base=null;this.revision=0;this.saving=false;this.role=null;this.blocked=false;this.conflicted=false;this.saveWaiters=[];this.lastSaveError=null;this.endpoint=options.endpoint??cloudEndpoint;if(this.endpoint&&!/^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/lol-room$/.test(this.endpoint))throw new Error('Supabase 연결 주소를 확인해 주세요.');this.cacheKey=this.endpoint?`naejun_shared_pending_v6:${this.endpoint}`:'naejun_shared_pending_v6';this.tokenKey=`naejun_cloud_session_v6:${this.endpoint}`;}
   status(message) {$('#saveStatus').textContent=message;}
   async request(path,method='GET',body) {
     const headers=body?{'Content-Type':'application/json','X-Requested-With':'Naejun'}:{};
@@ -53,7 +53,7 @@ export class SharedStore {
     $('#legacyImportBtn').onclick=()=>this.importLegacy();
     $('#logoutBtn').onclick=async()=>{if(this.pending){this.toast('미전송 기록을 먼저 저장하거나 백업해 주세요.');return;}await this.request('logout','POST',{});location.reload();};
     $('#syncRetryBtn').onclick=()=>{this.blocked=false;this.flush();};
-    $('#cloudReloadBtn').onclick=async()=>{try{if(this.pending&&!confirm('미전송 입력을 백업한 뒤 서버 최신 자료를 불러올까요?'))return;if(this.pending)this.download(this.pending,'미전송_기록');const data=await this.request('state');this.pending=null;this.base=data.state;this.revision=data.revision;this.blocked=false;this.setState(data.state);this.cache();this.status('서버 최신 자료를 불러왔습니다');$('#cloudReloadBtn').hidden=true;$('#syncRetryBtn').hidden=true;}catch(error){this.status(error.message);}};
+    $('#cloudReloadBtn').onclick=async()=>{try{if(this.pending&&!confirm('미전송 입력을 백업한 뒤 서버 최신 자료를 불러올까요?'))return;if(this.pending)this.download(this.pending,'미전송_기록');const data=await this.request('state');this.pending=null;this.base=data.state;this.revision=data.revision;this.blocked=false;this.conflicted=false;this.setState(data.state);this.cache();this.status('서버 최신 자료를 불러왔습니다');$('#cloudReloadBtn').hidden=true;$('#syncRetryBtn').hidden=true;}catch(error){this.status(error.message);}};
     $('#entryRetryBtn').onclick=()=>this.start(false);
     window.addEventListener('online',()=>{this.blocked=false;this.flush();});
     window.addEventListener('beforeunload',event=>{if(this.pending){event.preventDefault();event.returnValue='';}});
@@ -76,7 +76,7 @@ export class SharedStore {
     let pending;try{pending=JSON.parse(localStorage.getItem(this.cacheKey)||'null');}catch{}
     if(pending?.pending&&pending.base){
       try{this.pending=mergeDocuments(pending.base,pending.pending,data.state);}
-      catch{this.pending=pending.pending;this.blocked=true;this.status('다른 사람의 수정과 겹칩니다 · 미전송 기록을 백업하고 최신 자료를 확인해 주세요');$('#cloudReloadBtn').hidden=false;}
+      catch{this.pending=pending.pending;this.blocked=true;this.conflicted=true;this.status('다른 사람의 수정과 겹칩니다 · 미전송 기록을 백업하고 최신 자료를 확인해 주세요');$('#cloudReloadBtn').hidden=false;}
     }
     $('#resetBtn').hidden=this.role!=='admin';this.setState(this.pending||data.state);document.querySelector('.app-shell').inert=false;$('#entryDialog').close();
     if(!this.blocked)this.status('서버에 저장됨 · 다른 기기에서도 불러옵니다');
@@ -88,6 +88,18 @@ export class SharedStore {
     const next=shared(state);if(same(next,this.base)&&!this.pending)return;
     this.pending=next;const cached=this.cache();this.status(cached?'서버에 저장 중':'기기 백업 실패 · 서버에 저장 중');this.flush();return cached;
   }
+  async saveConfirmed(state) {
+    if(this.blocked&&!this.conflicted)this.blocked=false;
+    this.lastSaveError=null;
+    this.save(state);
+    for(let attempt=0;attempt<3;attempt++){
+      if(this.saving)await new Promise(resolve=>this.saveWaiters.push(resolve));
+      if(!this.pending&&this.role)return this.base;
+      if(this.blocked||!this.role)break;
+      await this.flush();
+    }
+    throw new Error(this.lastSaveError||'서버에 저장하지 못했습니다. 입력은 보존했습니다. 저장을 다시 시도해 주세요.');
+  }
   async flush() {
     if(!this.pending||this.saving||this.blocked||!this.role)return;
     this.saving=true;const sent=clone(this.pending);
@@ -97,12 +109,13 @@ export class SharedStore {
       else {this.pending=mergeDocuments(sent,this.pending,data.state);this.setState(this.pending);}
       this.base=data.state;this.revision=data.revision;this.status(this.pending?'서버에 저장 중':'서버에 저장됨 · 다른 기기에서도 불러옵니다');$('#syncRetryBtn').hidden=true;$('#cloudReloadBtn').hidden=true;this.cache();
     }catch(error){
+      this.lastSaveError=error.message;
       if(error.status===409&&error.data?.state){
         try{this.pending=mergeDocuments(this.base,this.pending,error.data.state);this.base=error.data.state;this.revision=error.data.revision;this.cache();}
-        catch{this.blocked=true;this.status('다른 사람의 수정과 겹칩니다 · 입력을 보존했습니다');$('#cloudReloadBtn').hidden=false;}
+        catch{this.blocked=true;this.conflicted=true;this.status('다른 사람의 수정과 겹칩니다 · 입력을 보존했습니다');$('#cloudReloadBtn').hidden=false;}
       }else if(error.status===401){this.cache();this.gate();$('#entryError').textContent='입장이 만료되었습니다. 새 비밀번호로 다시 입장해 주세요.';}
       else {this.blocked=true;this.status('서버에 저장하지 못했습니다 · 입력은 기기에 보관했습니다');$('#syncRetryBtn').hidden=false;this.toast(error.message);}
-    }finally {this.saving=false;if(this.pending&&!this.blocked&&this.role)setTimeout(()=>this.flush(),0);}
+    }finally {this.saving=false;this.saveWaiters.splice(0).forEach(resolve=>resolve());if(this.pending&&!this.blocked&&this.role)setTimeout(()=>this.flush(),0);}
   }
   async refresh() {
     if(!this.role||this.pending||this.saving||document.querySelector('dialog[open]')||document.activeElement?.matches('input,textarea,select'))return;

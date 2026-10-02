@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
-  <link rel="manifest" href="manifest.webmanifest?v=6-entry-layout-20261001">
+  <link rel="manifest" href="manifest.webmanifest?v=6-save-20261003">
   <link rel="apple-touch-icon" sizes="180x180" href="icon-entry-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-entry-192.png">
-  <link rel="stylesheet" href="styles.css?v=6-entry-layout-20261001">
+  <link rel="stylesheet" href="styles.css?v=6-save-20261003">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -69,7 +69,7 @@
           <div class="section-head result-head">
             <div>
               <p class="eyebrow">CURRENT TIER LIST</p>
-              <h2>현재 티어리스트</h2>
+              <h2>참가자 티어 · 가나다순</h2>
             </div>
           </div>
           <div id="tierListResult" class="tier-list"></div>
@@ -282,22 +282,23 @@
   </dialog>
 
   <dialog id="resultDialog" class="modal result-modal">
-    <form method="dialog">
+    <form method="dialog" id="resultForm" novalidate>
       <div class="modal-head">
         <div>
           <p class="eyebrow">MATCH RESULT</p>
           <h2 id="resultDialogTitle">경기 결과 입력</h2>
         </div>
-        <button value="cancel" formnovalidate class="icon-btn" aria-label="경기 결과 입력 닫기">×</button>
+        <button type="button" value="cancel" formnovalidate class="icon-btn" aria-label="경기 결과 입력 닫기">×</button>
       </div>
       <p id="resultDialogText" class="muted"></p>
       <p class="field-help">승리팀은 선택 사항입니다. 모르면 생략하세요.</p><div class="winner-grid">
         <button type="button" class="winner-btn team-a winner-choice" data-winner="A">A팀 승리</button>
         <button type="button" class="winner-btn team-b winner-choice" data-winner="B">B팀 승리</button>
       </div>
-      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="resultDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초"></label>
+      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="resultDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="resultDurationError"><span id="resultDurationError" class="entry-field-error" aria-live="polite"></span></label>
       <div class="result-subhead"><strong>10명 경기 수치</strong><small>레벨·K/D/A·CS·골드</small></div>
       <div id="resultStatEntry" class="stat-entry"></div>
+      <p id="resultSaveError" class="entry-save-error" role="alert" hidden></p>
       <button id="saveResultBtn" type="button" class="primary-btn large compact-submit">경기 기록 저장 · 학습</button>
       <p class="tiny-note">사진·OCR은 사용하지 않습니다. 직접 입력한 원본 수치를 기록하고 수치상 비교 결과와 보정 제외 설정을 함께 저장합니다. 기준 티어는 자동으로 덮어쓰지 않습니다.</p>
     </form>
@@ -305,17 +306,17 @@
 
 
   <dialog id="pastDialog" class="modal past-modal">
-    <form method="dialog" id="pastForm">
+    <form method="dialog" id="pastForm" novalidate>
       <div class="modal-head">
         <div>
           <p class="eyebrow">PAST MATCH</p>
           <h2>지난 전적 입력</h2>
         </div>
-        <button value="cancel" formnovalidate class="icon-btn" aria-label="지난 전적 입력 닫기">×</button>
+        <button type="button" value="cancel" formnovalidate class="icon-btn" aria-label="지난 전적 입력 닫기">×</button>
       </div>
       <p class="muted">예전 경기의 10명과 결과 수치를 직접 입력합니다. 여러 경기를 넣을 때는 가능하면 오래된 경기부터 입력하세요.</p>
       <label class="field">경기 시각 <small>선택</small><input id="pastDate" type="datetime-local"></label>
-      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="pastDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초"></label>
+      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="pastDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="pastDurationError"><span id="pastDurationError" class="entry-field-error" aria-live="polite"></span></label>
       <label class="field">승리팀 <small>선택</small>
         <select id="pastWinner" class="full-select"><option value="">승패 미기록</option><option value="A">A팀</option><option value="B">B팀</option></select>
       </label>
@@ -323,9 +324,10 @@
       <div id="pastRows" class="past-rows"></div>
       <div class="result-subhead"><strong>경기 수치</strong><small>레벨·K/D/A·CS·골드</small></div>
       <div id="pastStatEntry" class="stat-entry"></div>
+      <p id="pastSaveError" class="entry-save-error" role="alert" hidden></p>
       <div class="modal-actions">
-        <button value="cancel" formnovalidate class="secondary-btn">취소</button>
-        <button value="default" class="primary-btn">지난 전적 저장 · 학습</button>
+        <button type="button" value="cancel" formnovalidate class="secondary-btn">취소</button>
+        <button id="savePastBtn" type="submit" class="primary-btn">지난 전적 저장 · 학습</button>
       </div>
     </form>
   </dialog>
@@ -368,6 +370,6 @@
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=6-entry-layout-20261001"></script>
+  <script type="module" src="app.js?v=6-save-20261003"></script>
 </body>
 </html>

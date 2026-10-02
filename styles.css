@@ -178,3 +178,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sa
  .past-row select{padding-inline:6px}
 }
 @media(max-width:360px){.triple-input{grid-template-columns:1fr}}
+
+.entry-save-error,.entry-field-error{color:var(--bad);font-size:14px;line-height:1.65;overflow-wrap:anywhere}
+.entry-save-error{padding:12px;border:1px solid var(--bad);border-radius:6px;margin:12px 0;background:#fef2f2}
+.entry-field-error:empty{display:none}
