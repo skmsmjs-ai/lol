@@ -136,7 +136,7 @@ import { comparePlayerNames, normalizeGameDuration, firstStatIssue, sameGameInpu
 
   function numOrNull(v){
     if(v===null||v===undefined||String(v).trim()==="") return null;
-    const n=Number(v); return Number.isFinite(n)&&n>=0?n:null;
+    const n=Number(v); return Number.isFinite(n)?n:null;
   }
   function emptyGameStat(){return {level:null,k:null,d:null,a:null,cs:null,gold:null};}
   function durationFor(prefix){ const raw=$(`#${prefix==="live"?"result":"past"}Duration`).value.trim(); return normalizeGameDuration(raw)||raw; }
