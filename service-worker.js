@@ -1,5 +1,5 @@
-const CACHE = 'naejun-matchmaker-v6-edit7-20261003';
-const ASSETS = ['./','./index.html','./styles.css?v=6-edit7-20261003','./app.js?v=6-edit7-20261003','./role-model.js?v=6-edit7-20261003','./role-model.js','./room-rules.js','./record-edits.js?v=6-edit7-20261003','./shared-store.js?v=6-edit7-20261003','./cloud-config.js?v=6-edit7-20261003','./entry-input.js?v=6-edit7-20261003','./matcher-worker.js?v=6-edit7-20261003','./manifest.webmanifest?v=6-edit7-20261003','./icon-entry-180.png','./icon-entry-192.png','./icon-entry-512.png'];
+const CACHE = 'naejun-matchmaker-v6-partial-20261003';
+const ASSETS = ['./','./index.html','./styles.css?v=6-partial-20261003','./app.js?v=6-partial-20261003','./role-model.js?v=6-partial-20261003','./role-model.js','./room-rules.js','./record-edits.js?v=6-partial-20261003','./shared-store.js?v=6-partial-20261003','./cloud-config.js?v=6-partial-20261003','./entry-input.js?v=6-partial-20261003','./matcher-worker.js?v=6-partial-20261003','./manifest.webmanifest?v=6-partial-20261003','./icon-entry-180.png','./icon-entry-192.png','./icon-entry-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS.map(path=>new Request(new URL(path,self.location.href),{cache:'reload'})))).then(()=>self.skipWaiting()));
 });

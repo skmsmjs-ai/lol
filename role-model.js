@@ -41,14 +41,24 @@ export function validStat(s) {
   if (!s || !['k', 'd', 'a', 'cs', 'gold', 'level'].every(k => typeof s[k] === 'number' && Number.isSafeInteger(s[k]))) return false;
   return ['k', 'd', 'a', 'cs', 'gold'].every(k => s[k] >= 0 && s[k] <= (k === 'gold' ? 1000000 : 10000)) && s.level >= 1 && s.level <= 20;
 }
-export function validateGameStats(stats, duration) {
+export function validateGameStats(stats, duration, allowMissing = false) {
   if (!parseDuration(duration)) return '게임시간';
-  for (const r of ROLES) for (const side of ['A', 'B']) if (!validStat(stats?.[r]?.[side])) return `${ROLE_KR[r]} ${side}팀: 레벨(1~20)·K/D/A·CS·골드를 정수로 입력해 주세요.`;
+  for (const r of ROLES) for (const side of ['A', 'B']) if (!(allowMissing ? ['level','k','d','a','cs','gold'].every(key => { const v=stats?.[r]?.[side]?.[key]; return v===null || (Number.isSafeInteger(v) && v >= (key==='level'?1:0) && v <= (key==='level'?20:key==='gold'?1000000:10000)); }) : validStat(stats?.[r]?.[side]))) return `${ROLE_KR[r]} ${side}팀: 레벨(1~20)·K/D/A·CS·골드를 정수로 입력해 주세요.`;
   for (const side of ['A', 'B']) {
+    if (!ROLES.every(r => Number.isSafeInteger(stats[r][side].k) && Number.isSafeInteger(stats[r][side].a))) continue;
     const total = ROLES.reduce((n, r) => n + stats[r][side].k, 0);
     if (ROLES.some(r => stats[r][side].k + stats[r][side].a > total)) return `${side}팀의 K+A가 팀 전체 킬보다 큽니다. 킬·어시스트를 확인해 주세요.`;
   }
   return null;
+}
+// Incomplete originals are stored with nulls, without inventing inputs or skill evidence.
+export function recordPendingReasons(record) {
+  const missing=[];
+  if (!record.time) missing.push('경기 날짜');
+  if (record.rolesConfirmed===false) missing.push('역할군 확인');
+  const labels={level:'레벨',k:'킬',d:'데스',a:'어시스트',cs:'CS',gold:'골드'};
+  for (const [key,label] of Object.entries(labels)) if (ROLES.some(r=>['A','B'].some(side=>record.stats?.[r]?.[side]?.[key]==null))) missing.push(label);
+  return missing;
 }
 // Signed bounded contrast. Pseudocounts tame tiny counts; no missing value becomes zero.
 const contrast = (a, b, prior) => Math.tanh(Math.log((a + prior) / (b + prior)) / Math.log(2));
@@ -96,6 +106,8 @@ export function deriveResult(stats, duration, modes = {}) {
   return { modelVersion: MODEL_VERSION, roleAdv, roleObserved, roleEvidenceWeight, roleAdvSource, statAssessment };
 }
 export function applyRatingUpdate(state, record) {
+  if (record.pendingReasons?.length) { record.ratingApplied=false; record.loggedAt ||= new Date().toISOString(); state.history.push(record); return; }
+  record.ratingApplied=true;
   record.ratingVersion = RATING_VERSION;
   record.tierSensitivity = TIER_SENSITIVITY;
   const winnerKnown = record.winner === 'A' || record.winner === 'B';

@@ -11,6 +11,7 @@ function decrement(obj,key){if(!Number.isSafeInteger(obj[key])||obj[key]<1)throw
 // Older records have no checkpoint. Reverse only their documented five-input
 // updates, then verify by replaying the original updates before any edit.
 function undo(next,h){
+  if(h.ratingApplied===false)return;
   if(h.ratingBefore){
     for(const [id,value] of Object.entries(h.ratingBefore.players)){const p=next.roster.find(p=>p.id===id);if(!p)throw safeFailure();Object.assign(p,clone(value));}
     next.model=clone(h.ratingBefore.model);return;
@@ -49,7 +50,7 @@ export function editRecord(current,request,actor='member'){
   if(index<0)throw new HttpError(404,'수정할 경기를 찾지 못했습니다.');
   const original=current.history[index];
   if(!same(original,request.expectedRecord))throw new HttpError(409,'이 전적이 다른 기기에서 바뀌었습니다. 수정 초안은 보존했습니다. 기록을 다시 열어 주세요.');
-  if(!input||input.id!==original.id||!Number.isFinite(Date.parse(input.time)))throw new HttpError(422,'경기 시각과 기록을 확인해 주세요.');
+  if(!input||input.id!==original.id||(input.time!==null&&!Number.isFinite(Date.parse(input.time))))throw new HttpError(422,'경기 시각과 기록을 확인해 주세요.');
   // Corrections keep each original team and player ID. Position selectors swap
   // teammates, so the player's complete stats travel with the player.
   for(const side of ['aId','bId']){
@@ -68,6 +69,7 @@ export function editRecord(current,request,actor='member'){
   let rebuilt=next;
   for(let i=0;i<suffix.length;i++){
     const raw=i===0?{...suffix[i],...clone(input)}:suffix[i];
+    if(i===0&&original.ratingApplied===false&&!input.roleAdv)delete raw.roleAdv;
     const proposed=clone(rebuilt);proposed.history.push(raw);
     // Preserve the active draft while calculating the corrected history.
     rebuilt=acceptChanges(rebuilt,proposed,actor);

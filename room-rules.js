@@ -1,4 +1,4 @@
-import { ROLES, validateGameStats, deriveResult, applyRatingUpdate, roleTier } from './role-model.js';
+import { ROLES, validateGameStats, deriveResult, applyRatingUpdate, roleTier, recordPendingReasons } from './role-model.js';
 const copy=value=>JSON.parse(JSON.stringify(value));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export class HttpError extends Error {constructor(status,message,data={}){super(message);this.status=status;this.data=data;}}
@@ -29,7 +29,7 @@ export function acceptChanges(current,incoming,role){
     return normalizePlayer({id:p.id,name:p.name,baseTier:p.baseTier,possible:copy(p.possible)});
   });
   for(const raw of incoming.history.filter(h=>!oldHistory.has(h.id))){
-    const error=validateGameStats(raw.stats,raw.duration);if(error)throw new HttpError(422,error==='게임시간'?'게임 시간을 분:초로 입력해 주세요.':error);
+    const error=validateGameStats(raw.stats,raw.duration,raw.source==='past');if(error)throw new HttpError(422,error==='게임시간'?'게임 시간을 분:초로 입력해 주세요.':error);
     const idSet=new Set(),roles={},players=new Map(next.roster.map(p=>[p.id,p]));
     const tier=roleTier;
     for(const r of ROLES){const m=raw.roles?.[r],a=players.get(m?.aId),b=players.get(m?.bId);if(!a||!b)throw new HttpError(422,'경기의 선수 정보를 확인해 주세요.');idSet.add(a.id);idSet.add(b.id);roles[r]={aId:a.id,bId:b.id,aName:a.name,bName:b.name,aTier:tier(a,r),bTier:tier(b,r)};}
@@ -38,7 +38,11 @@ export function acceptChanges(current,incoming,role){
     const feature=['TOP','JG','MID'].map(r=>(roles[r].bTier-roles[r].aTier)/3);feature.push((bot(roles.ADC.bTier,roles.SUP.bTier)-bot(roles.ADC.aTier,roles.SUP.aTier))/3);
     const predictedAWin=1/(1+Math.exp(-feature.reduce((n,f,i)=>n+f*next.model.weights[i],0)));
     const modes=Object.fromEntries(ROLES.map(r=>[r,raw.roleAdv?.[r]==='U'?'U':'S']));
-    const record={id:raw.id,time:typeof raw.time==='string'&&Number.isFinite(Date.parse(raw.time))?raw.time:new Date().toISOString(),loggedAt:raw.loggedAt&&Number.isFinite(Date.parse(raw.loggedAt))?raw.loggedAt:new Date().toISOString(),source:raw.source==='past'?'past':'live',plan:Number.isSafeInteger(raw.plan)?raw.plan:null,winner:['A','B'].includes(raw.winner)?raw.winner:null,duration:raw.duration,roles,stats:copy(raw.stats),feature,predictedAWin,...deriveResult(raw.stats,raw.duration,modes)};
+    const record={id:raw.id,time:raw.source==='past'&&raw.time===null?null:typeof raw.time==='string'&&Number.isFinite(Date.parse(raw.time))?raw.time:new Date().toISOString(),loggedAt:raw.loggedAt&&Number.isFinite(Date.parse(raw.loggedAt))?raw.loggedAt:new Date().toISOString(),source:raw.source==='past'?'past':'live',plan:Number.isSafeInteger(raw.plan)?raw.plan:null,winner:['A','B'].includes(raw.winner)?raw.winner:null,duration:raw.duration,roles,stats:copy(raw.stats),feature,predictedAWin,...deriveResult(raw.stats,raw.duration,modes)};
+    if(raw.sourcePhoto&&Number.isSafeInteger(raw.sourcePhoto.photo)&&/^[0-9a-f]{64}$/.test(raw.sourcePhoto.sha256))record.sourcePhoto=copy(raw.sourcePhoto);
+    record.rolesConfirmed=raw.rolesConfirmed!==false;
+    record.pendingReasons=recordPendingReasons(record);
+    if(record.pendingReasons.length){record.predictedAWin=null;Object.assign(record,deriveResult(record.stats,record.duration,Object.fromEntries(ROLES.map(r=>[r,'U']))));}
     record.ratingBefore={model:copy(next.model),players:Object.fromEntries([...idSet].map(id=>{const p=players.get(id);return [id,{rating:p.rating,roleRating:copy(p.roleRating),stats:copy(p.stats)}];}))};
     applyRatingUpdate(next,record);
   }

@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
-  <link rel="manifest" href="manifest.webmanifest?v=6-edit7-20261003">
+  <link rel="manifest" href="manifest.webmanifest?v=6-partial-20261003">
   <link rel="apple-touch-icon" sizes="180x180" href="icon-entry-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-entry-192.png">
-  <link rel="stylesheet" href="styles.css?v=6-edit7-20261003">
+  <link rel="stylesheet" href="styles.css?v=6-partial-20261003">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -316,7 +316,9 @@
       </div>
       <p id="pastDialogText" class="muted">예전 경기의 10명과 결과 수치를 직접 입력합니다. 여러 경기를 넣을 때는 가능하면 오래된 경기부터 입력하세요.</p>
       <div id="recordEditHistory" hidden></div>
-      <label class="field">경기 시각 <small>선택</small><input id="pastDate" type="datetime-local"></label>
+      <p class="muted">모르는 수치는 비워 두고 먼저 저장할 수 있습니다. 빠진 정보와 역할군을 확인한 뒤 티어에 반영합니다.</p>
+      <label><input id="pastRolesConfirmed" type="checkbox" checked> 아래 역할군을 확인했습니다</label>
+      <label class="field">경기 시각 <small>모르면 비워 두고 나중에 입력</small><input id="pastDate" type="datetime-local"></label>
       <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="pastDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="pastDurationError"><span id="pastDurationError" class="entry-field-error" aria-live="polite"></span></label>
       <label class="field">승리팀 <small>선택</small>
         <select id="pastWinner" class="full-select"><option value="">승패 미기록</option><option value="A">A팀</option><option value="B">B팀</option></select>
@@ -371,6 +373,6 @@
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=6-edit7-20261003"></script>
+  <script type="module" src="app.js?v=6-partial-20261003"></script>
 </body>
 </html>
