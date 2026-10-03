@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
-  <link rel="manifest" href="manifest.webmanifest?v=6-partial-20261003">
+  <link rel="manifest" href="manifest.webmanifest?v=6-adaptive-20261003">
   <link rel="apple-touch-icon" sizes="180x180" href="icon-entry-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-entry-192.png">
-  <link rel="stylesheet" href="styles.css?v=6-partial-20261003">
+  <link rel="stylesheet" href="styles.css?v=6-adaptive-20261003">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -136,10 +136,10 @@
         </section>
 
         <section class="formula-card">
-          <div class="formula-title"><span>3</span><div><strong>다섯 입력으로 같은 포지션 비교</strong><p>레벨·K/D/A·CS·게임 시간·획득 골드만 사용합니다.</p></div></div>
-          <div class="formula" data-formula="role-stats"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>G</mi><mi>r</mi></msub><mo>=</mo><msub><mi>α</mi><mi>r</mi></msub><msub><mi>z</mi><mi>g</mi></msub><mo>+</mo><msub><mi>β</mi><mi>r</mi></msub><msub><mi>z</mi><mi>c</mi></msub><mo>+</mo><msub><mi>γ</mi><mi>r</mi></msub><msub><mi>z</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">G_r=\alpha_r z_g+\beta_r z_c+\gamma_r z_\ell</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow><mi mathvariant="normal">K</mi><mi mathvariant="normal">P</mi></mrow><mo>=</mo><mfrac><mrow><mi>K</mi><mo>+</mo><mi>A</mi></mrow><msub><mi>K</mi><mtext>팀</mtext></msub></mfrac></mrow><annotation encoding="application/x-tex">\mathrm{KP}=\frac{K+A}{K_{\text{팀}}}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>E</mi><mo>=</mo><mi>ln</mi><mo>⁡</mo><mtext> ⁣</mtext><mrow><mo fence="true">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mi>K</mi><mo>+</mo><mi>A</mi></mrow><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mi>D</mi><mo stretchy="false">)</mo></mrow></mfrac><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">E=\ln\!\left(1+\frac{K+A}{\max(1,D)}\right)</annotation></semantics></math></span></div></div><!-- formula-end -->
+          <div class="formula-title"><span>3</span><div><strong>입력한 지표만으로 포지션 비교</strong><p>레벨·K/D/A·CS·골드·챔피언 피해량 중 확인 가능한 값만 사용합니다.</p></div></div>
+          <div class="formula" data-formula="role-stats"><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>S</mi><mi>r</mi></msub><mo>=</mo><mfrac><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><msub><mi>O</mi><mi>r</mi></msub></mrow></munder><msub><mi>w</mi><mrow><mi>r</mi><mi>j</mi></mrow></msub><msub><mi>z</mi><mi>j</mi></msub></mrow><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><msub><mi>O</mi><mi>r</mi></msub></mrow></munder><msub><mi>w</mi><mrow><mi>r</mi><mi>j</mi></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">S_r=\frac{\sum_{j\in O_r}w_{rj}z_j}{\sum_{j\in O_r}w_{rj}}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>O</mi><mi>r</mi></msub><mo>=</mo><mo stretchy="false">{</mo><mi>j</mi><mo>:</mo><mtext>양 팀에서 입력한 지표</mtext><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">O_r=\{j:\text{양 팀에서 입력한 지표}\}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow><mi mathvariant="normal">K</mi><mi mathvariant="normal">P</mi></mrow><mo>=</mo><mfrac><mrow><mi>K</mi><mo>+</mo><mi>A</mi></mrow><msub><mi>K</mi><mtext>팀</mtext></msub></mfrac></mrow><annotation encoding="application/x-tex">\mathrm{KP}=\frac{K+A}{K_{\text{팀}}}</annotation></semantics></math></span></div><div class="math-line"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>E</mi><mo>=</mo><mi>ln</mi><mo>⁡</mo><mtext> ⁣</mtext><mrow><mo fence="true">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mi>K</mi><mo>+</mo><mi>A</mi></mrow><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mi>D</mi><mo stretchy="false">)</mo></mrow></mfrac><mo fence="true">)</mo></mrow></mrow><annotation encoding="application/x-tex">E=\ln\!\left(1+\frac{K+A}{\max(1,D)}\right)</annotation></semantics></math></span></div></div><!-- formula-end -->
           <p class="criteria-note">G는 성장 비교값입니다. z의 아래첨자 g·c·ℓ은 골드/분·CS/분·레벨의 상대 비교값이고, α·β·γ는 포지션별 비중입니다. KP는 킬 관여율, E는 KDA 효율, K·D·A는 킬·데스·어시스트입니다. 팀 전체 킬이 0이면 KP는 미확인입니다.</p>
-          <p class="criteria-note">같은 경기의 같은 포지션 상대와 비교합니다. 서로 연관된 골드·CS·레벨은 성장 한 묶음 안에 넣어 중복 반영을 제한합니다. 게임 시간은 분당 수치와 짧은 경기의 보정 축소에 사용합니다.</p>
+          <p class="criteria-note">빈 값은 0으로 채우지 않습니다. 양 팀에 함께 있는 지표만 남겨 가중치를 다시 맞춥니다. 피해량은 챔피언에게 가한 피해량이며 탑 15%·정글 10%·미드 20%·원딜 25%로 반영하고 서포터에서는 제외합니다. 피해량이 없으면 기존 지표끼리 평가합니다. 같은 경기의 같은 포지션 상대와 비교합니다. 서로 연관된 골드·CS·레벨은 성장 한 묶음 안에 넣어 중복 반영을 제한합니다. 게임 시간은 분당 수치와 짧은 경기의 보정 축소에 사용합니다. 시간이 없으면 같은 경기 총량을 비교하고 보정 강도를 낮춥니다. 역할 미확정 배치는 임시로 평가하며 강도를 절반으로 낮춥니다.</p>
           <table class="role-rules-table"><caption>포지션별 수치상 ‘잘함’의 정의와 초기 비중</caption><thead><tr><th>포지션</th><th>기준</th><th>성장</th><th>킬 관여</th><th>KDA</th></tr></thead><tbody>
             <tr><th>탑</th><td>성장 유지와 교전 기여</td><td>60%</td><td>15%</td><td>25%</td></tr>
             <tr><th>정글</th><td>성장과 팀 교전 참여</td><td>40%</td><td>35%</td><td>25%</td></tr>
@@ -295,12 +295,12 @@
         <button type="button" class="winner-btn team-a winner-choice" data-winner="A">A팀 승리</button>
         <button type="button" class="winner-btn team-b winner-choice" data-winner="B">B팀 승리</button>
       </div>
-      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="resultDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="resultDurationError"><span id="resultDurationError" class="entry-field-error" aria-live="polite"></span></label>
-      <div class="result-subhead"><strong>10명 경기 수치</strong><small>레벨·K/D/A·CS·골드</small></div>
+      <label class="field">게임 시간 <small>선택 입력 · 예: 31:42</small><input id="resultDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="resultDurationError"><span id="resultDurationError" class="entry-field-error" aria-live="polite"></span></label>
+      <div class="result-subhead"><strong>10명 경기 수치</strong><small>레벨·K/D/A·CS·골드·피해량 (모두 선택)</small></div>
       <div id="resultStatEntry" class="stat-entry"></div>
       <p id="resultSaveError" class="entry-save-error" role="alert" hidden></p>
       <button id="saveResultBtn" type="submit" class="primary-btn large compact-submit">경기 기록 저장 · 학습</button>
-      <p class="tiny-note">사진·OCR은 사용하지 않습니다. 직접 입력한 원본 수치를 기록하고 수치상 비교 결과와 보정 제외 설정을 함께 저장합니다. 기준 티어는 자동으로 덮어쓰지 않습니다.</p>
+      <p class="tiny-note">확인 가능한 값만 입력하면 됩니다. 직접 입력한 원본 수치를 기록하고 수치상 비교 결과와 보정 제외 설정을 함께 저장합니다. 기준 티어는 자동으로 덮어쓰지 않습니다.</p>
     </form>
   </dialog>
 
@@ -316,16 +316,16 @@
       </div>
       <p id="pastDialogText" class="muted">예전 경기의 10명과 결과 수치를 직접 입력합니다. 여러 경기를 넣을 때는 가능하면 오래된 경기부터 입력하세요.</p>
       <div id="recordEditHistory" hidden></div>
-      <p class="muted">모르는 수치는 비워 두고 먼저 저장할 수 있습니다. 빠진 정보와 역할군을 확인한 뒤 티어에 반영합니다.</p>
-      <label><input id="pastRolesConfirmed" type="checkbox" checked> 아래 역할군을 확인했습니다</label>
+      <p class="muted">모르는 수치는 비워 두고 먼저 저장할 수 있습니다. 빈 값은 계산에서 제외하고 바로 티어에 반영합니다. 역할은 나중에 수정할 수 있습니다.</p>
+      <label><input id="pastRolesConfirmed" type="checkbox" checked> 역할군 확정 (미선택이면 임시 배치로 반영)</label>
       <label class="field">경기 시각 <small>모르면 비워 두고 나중에 입력</small><input id="pastDate" type="datetime-local"></label>
-      <label class="field">게임 시간 <small>한 경기당 한 번 · 예: 31:42</small><input id="pastDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="pastDurationError"><span id="pastDurationError" class="entry-field-error" aria-live="polite"></span></label>
+      <label class="field">게임 시간 <small>선택 입력 · 예: 31:42</small><input id="pastDuration" inputmode="text" placeholder="31:42" aria-label="게임 시간 분:초" aria-describedby="pastDurationError"><span id="pastDurationError" class="entry-field-error" aria-live="polite"></span></label>
       <label class="field">승리팀 <small>선택</small>
         <select id="pastWinner" class="full-select"><option value="">승패 미기록</option><option value="A">A팀</option><option value="B">B팀</option></select>
       </label>
       <div class="past-head"><span>역할</span><span>A팀</span><span></span><span>B팀</span></div>
       <div id="pastRows" class="past-rows"></div>
-      <div class="result-subhead"><strong>경기 수치</strong><small>레벨·K/D/A·CS·골드</small></div>
+      <div class="result-subhead"><strong>경기 수치</strong><small>레벨·K/D/A·CS·골드·피해량 (모두 선택)</small></div>
       <div id="pastStatEntry" class="stat-entry"></div>
       <p id="pastSaveError" class="entry-save-error" role="alert" hidden></p>
       <div class="modal-actions">
@@ -373,6 +373,6 @@
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=6-partial-20261003"></script>
+  <script type="module" src="app.js?v=6-adaptive-20261003"></script>
 </body>
 </html>

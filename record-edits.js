@@ -16,7 +16,7 @@ function undo(next,h){
     for(const [id,value] of Object.entries(h.ratingBefore.players)){const p=next.roster.find(p=>p.id===id);if(!p)throw safeFailure();Object.assign(p,clone(value));}
     next.model=clone(h.ratingBefore.model);return;
   }
-  if(h.modelVersion!=='role-five-inputs-2026-10-01-v1'||!Array.isArray(h.weightsBefore)||!Number.isFinite(h.predictedAWin))throw safeFailure();
+  if(!['role-five-inputs-2026-10-01-v1','role-available-inputs-2026-10-03-v2'].includes(h.modelVersion)||!Array.isArray(h.weightsBefore)||!Number.isFinite(h.predictedAWin))throw safeFailure();
   const players=new Map(next.roster.map(p=>[p.id,p])),known=['A','B'].includes(h.winner),y=h.winner==='A'?1:0;
   for(const r of ROLES){
     const m=h.roles[r],a=players.get(m.aId),b=players.get(m.bId);if(!a||!b)throw safeFailure();
@@ -69,7 +69,7 @@ export function editRecord(current,request,actor='member'){
   let rebuilt=next;
   for(let i=0;i<suffix.length;i++){
     const raw=i===0?{...suffix[i],...clone(input)}:suffix[i];
-    if(i===0&&original.ratingApplied===false&&!input.roleAdv)delete raw.roleAdv;
+    if(raw.ratingApplied===false&&(i!==0||!input.roleAdv))delete raw.roleAdv;
     const proposed=clone(rebuilt);proposed.history.push(raw);
     // Preserve the active draft while calculating the corrected history.
     rebuilt=acceptChanges(rebuilt,proposed,actor);
