@@ -12,7 +12,7 @@
   주의: 아래 계수는 Riot 공식 수치가 아니다. 공개된 '역할군 공평성' 방향을
   참고한 내전용 휴리스틱이며, 앱 안에서 모든 기준을 공개한다.
 */
-import { roleTier } from './role-model.js?v=6-adaptive-20261003';
+import { roleTier } from './role-model.js?v=6-cs15-20261004';
 const ROLES=["TOP","JG","MID","ADC","SUP"];
 const PRIOR=[1.00,1.08,1.00,0.95];
 const BASE=[11.0,12.0,11.0];

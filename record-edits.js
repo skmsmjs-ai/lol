@@ -16,7 +16,7 @@ function undo(next,h){
     for(const [id,value] of Object.entries(h.ratingBefore.players)){const p=next.roster.find(p=>p.id===id);if(!p)throw safeFailure();Object.assign(p,clone(value));}
     next.model=clone(h.ratingBefore.model);return;
   }
-  if(!['role-five-inputs-2026-10-01-v1','role-available-inputs-2026-10-03-v2'].includes(h.modelVersion)||!Array.isArray(h.weightsBefore)||!Number.isFinite(h.predictedAWin))throw safeFailure();
+  if(!['role-five-inputs-2026-10-01-v1','role-available-inputs-2026-10-03-v2','role-cs-optional-2026-10-04-v3'].includes(h.modelVersion)||!Array.isArray(h.weightsBefore)||!Number.isFinite(h.predictedAWin))throw safeFailure();
   const players=new Map(next.roster.map(p=>[p.id,p])),known=['A','B'].includes(h.winner),y=h.winner==='A'?1:0;
   for(const r of ROLES){
     const m=h.roles[r],a=players.get(m.aId),b=players.get(m.bId);if(!a||!b)throw safeFailure();

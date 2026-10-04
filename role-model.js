@@ -1,8 +1,8 @@
 // Inner-room comparison heuristic, not Riot MMR or an empirically calibrated skill scale.
-export const MODEL_VERSION = 'role-available-inputs-2026-10-03-v2';
-export const RATING_VERSION = 'tier-sensitivity-2026-10-03-v4';
+export const MODEL_VERSION = 'role-cs-optional-2026-10-04-v3';
+export const RATING_VERSION = 'tier-sensitivity-2026-10-04-v5';
 // Apply the gain when interpreting stored corrections, so old originals need no replay.
-export const TIER_SENSITIVITY = 7;
+export const TIER_SENSITIVITY = 15;
 export const ROLES = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
 export const ROLE_KR = { TOP: '탑', JG: '정글', MID: '미드', ADC: '원딜', SUP: '서포터' };
 export const PRIOR = [1, 1.08, 1, .95];
@@ -84,11 +84,15 @@ export function assessRole(role, stats, duration) {
   const observed=Object.keys(weights).filter(k=>weights[k]>0&&values[k]!==null),coverage=observed.reduce((n,k)=>n+weights[k],0);
   if(!coverage)return null;
   const score=observed.reduce((n,k)=>n+weights[k]*values[k],0)/coverage;
-  const evidence=rule.evidence*coverage*(minutes?Math.min(1,minutes/20):.75);
+  // CS is supplementary: omit its weight from both the score and evidence denominator.
+  // Other missing evidence still lowers confidence; no value is synthesized.
+  const eligibleWeight=1-(values.cs===null?(weights.cs||0):0);
+  const evidenceCoverage=clamp(coverage/eligibleWeight,0,1);
+  const evidence=rule.evidence*evidenceCoverage*(minutes?Math.min(1,minutes/20):.75);
   const adv=score>=.10?'A':score<=-.10?'B':'E';
   const labels={gold:'골드',cs:'CS',level:'레벨',participation:'킬 관여',efficiency:'KDA 효율',damage:'챔피언 피해량'};
   const parts=observed.map(k=>({metric:k,label:labels[k],diff:values[k],weight:weights[k]/coverage}));
-  return {modelVersion:MODEL_VERSION,score,adv,label:adv==='E'?'수치상 비슷':`${adv}팀 수치상 우세`,completeness:coverage,evidence,parts,growthParts:values,minutes,definition:rule.definition,observedMetrics:observed,rates:Object.fromEntries([['A',a],['B',b]].map(([side,s])=>[side,Object.fromEntries(['cs','gold','damage'].map(k=>[k,minutes&&known(s,k)?s[k]/minutes:null]))]))};
+  return {modelVersion:MODEL_VERSION,score,adv,label:adv==='E'?'수치상 비슷':`${adv}팀 수치상 우세`,completeness:evidenceCoverage,observedWeight:coverage,eligibleWeight,evidence,parts,growthParts:values,minutes,definition:rule.definition,observedMetrics:observed,rates:Object.fromEntries([['A',a],['B',b]].map(([side,s])=>[side,Object.fromEntries(['cs','gold','damage'].map(k=>[k,minutes&&known(s,k)?s[k]/minutes:null]))]))};
 }
 export function deriveResult(stats, duration, modes = {}) {
   const roleAdv = {}, roleObserved = {}, roleEvidenceWeight = {}, roleAdvSource = {}, statAssessment = {};
@@ -119,7 +123,10 @@ export function applyRatingUpdate(state, record) {
   const winnerKnown = record.winner === 'A' || record.winner === 'B';
   const before = [...state.model.weights];
   const y = record.winner === 'A' ? 1 : 0;
-  if (winnerKnown && !(record.modelVersion===MODEL_VERSION && record.rolesConfirmed===false)) {
+  // Replay historical calculations using their recorded confirmation state.
+  // An old provisional flag may remain after the roles were confirmed.
+  const provisionalRoles=record.rolesConfirmed===false&&['role-available-inputs-2026-10-03-v2',MODEL_VERSION].includes(record.modelVersion);
+  if (winnerKnown && !provisionalRoles) {
     const lr = .045 / Math.sqrt(1 + state.model.gamesLearned / 20);
     for (let i = 0; i < 4; i++) state.model.weights[i] = clamp(before[i] + lr * ((y - record.predictedAWin) * record.feature[i] + .025 * (PRIOR[i] - before[i])), .40, 1.80);
   }
