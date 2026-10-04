@@ -1,4 +1,4 @@
-import { cloudEndpoint } from './cloud-config.js?v=6-cs15-20261004';
+import { cloudEndpoint } from './cloud-config.js?v=6-role60-merge-20261004';
 const $ = selector => document.querySelector(selector);
 const clone = value => value===undefined?undefined:JSON.parse(JSON.stringify(value));
 const shared = state => { const value=clone(state); delete value.session; return value; };
@@ -126,8 +126,12 @@ export class SharedStore {
     if(!this.role)throw new Error('다시 입장한 뒤 수정 내용을 저장해 주세요.');
     this.saving=true;this.status('전적 수정과 티어를 저장 중');
     try{
-      const current=await this.request('state');
-      const data=await this.request('records/edit','POST',{...edit,revision:current.revision});
+      let data;
+      for(let attempt=0;attempt<3;attempt++){
+        const current=await this.request('state');
+        try{data=await this.request('records/edit','POST',{...edit,revision:current.revision});break;}
+        catch(error){if(error.status===409&&error.data?.state&&!error.data?.conflicts&&attempt<2)continue;throw error;}
+      }
       this.base=data.state;this.revision=data.revision;this.setState(data.state);this.cache();this.status('전적 수정이 서버에 저장됨 · 다른 기기에서도 불러옵니다');return data.state;
     }catch(error){this.status('전적 수정을 저장하지 못했습니다 · 수정 초안은 기기에 보관했습니다');throw error;}
     finally{this.saving=false;this.saveWaiters.splice(0).forEach(resolve=>resolve());}

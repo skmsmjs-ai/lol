@@ -6,6 +6,22 @@ export const sameEditInput=(a,b)=>JSON.stringify(ordered(a))===JSON.stringify(or
 const same=sameEditInput;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const derived=p=>({rating:p.rating,roleRating:clone(p.roleRating),stats:clone(p.stats)});
+// Three-way merge user-entered fields only. Calculation metadata and names
+// may change during replay without changing the user's original input.
+export function editableRecord(h){
+  const statsByPlayer={},roles={},roleAdv={};
+  for(const r of ROLES){roles[r]={aId:h.roles?.[r]?.aId,bId:h.roles?.[r]?.bId};roleAdv[r]=h.roleAdv?.[r]==='U'?'U':'S';for(const side of ['A','B']){const id=roles[r][side==='A'?'aId':'bId'];statsByPlayer[id]=Object.fromEntries(['level','k','d','a','cs','gold','damage'].map(k=>[k,h.stats?.[r]?.[side]?.[k]??null]));}}
+  return {id:h.id,time:h.time??null,winner:h.winner??null,duration:h.duration||'',rolesConfirmed:h.rolesConfirmed!==false,roles,statsByPlayer,roleAdv};
+}
+export function rebaseRecordEdit(base,input,current,resolutions={}){
+  if(!base||base.id!==current.id||input?.id!==current.id)throw new HttpError(422,'수정할 경기 정보를 확인해 주세요.');
+  const b=editableRecord(base),l=editableRecord(input),r=editableRecord(current),conflicts=[];
+  if(!same(Object.keys(b.statsByPlayer).sort(),Object.keys(l.statsByPlayer).sort())||!same(Object.keys(b.statsByPlayer).sort(),Object.keys(r.statsByPlayer).sort()))throw new HttpError(422,'각 팀의 기존 선수 5명을 중복 없이 배치해 주세요.');
+  function merge(b,l,r,path){if(same(l,b))return clone(r);if(same(r,b)||same(l,r))return clone(l);if(b&&l&&r&&typeof b==='object'&&typeof l==='object'&&typeof r==='object'){return Object.fromEntries(Object.keys(b).map(k=>[k,merge(b[k],l[k],r[k],path?path+'.'+k:k)]));}if(resolutions[path]==='local')return clone(l);if(resolutions[path]==='remote')return clone(r);conflicts.push({field:path,base:b,local:l,remote:r});return clone(l);}
+  const m=merge(b,l,r,'');
+  if(conflicts.length)throw new HttpError(409,'같은 항목을 서로 다르게 수정했습니다. 아래 값을 비교해 선택해 주세요. 수정 초안은 보존했습니다.',{latestRecord:clone(current),conflicts});
+  const {statsByPlayer,...out}=m;out.stats=Object.fromEntries(ROLES.map(role=>[role,Object.fromEntries(['A','B'].map(side=>[side,statsByPlayer[m.roles[role][side==='A'?'aId':'bId']]]))]));return out;
+}
 const safeFailure=()=>new HttpError(422,'이 경기의 이전 계산 자료를 안전하게 복구하지 못했습니다. 원본을 보존했으며 관리자에게 확인해 주세요.');
 function decrement(obj,key){if(!Number.isSafeInteger(obj[key])||obj[key]<1)throw safeFailure();obj[key]--;}
 // Older records have no checkpoint. Reverse only their documented five-input
@@ -46,10 +62,10 @@ function close(a,b){
 export function editRecord(current,request,actor='member'){
   if(!['member','participant','admin'].includes(actor))throw new HttpError(403,'입장한 뒤 전적을 수정해 주세요.');
   if(typeof request.editId!=='string'||request.editId.length>150||!request.editId)throw new HttpError(422,'수정 요청을 확인해 주세요.');
-  const index=current.history.findIndex(h=>h.id===request.recordId),input=request.input;
+  const index=current.history.findIndex(h=>h.id===request.recordId);let input=request.input;
   if(index<0)throw new HttpError(404,'수정할 경기를 찾지 못했습니다.');
   const original=current.history[index];
-  if(!same(original,request.expectedRecord))throw new HttpError(409,'이 전적이 다른 기기에서 바뀌었습니다. 수정 초안은 보존했습니다. 기록을 다시 열어 주세요.');
+  if(!same(original,request.expectedRecord))input=rebaseRecordEdit(request.expectedRecord,input,original);
   if(!input||input.id!==original.id||(input.time!==null&&!Number.isFinite(Date.parse(input.time))))throw new HttpError(422,'경기 시각과 기록을 확인해 주세요.');
   // Corrections keep each original team and player ID. Position selectors swap
   // teammates, so the player's complete stats travel with the player.
@@ -75,6 +91,6 @@ export function editRecord(current,request,actor='member'){
     rebuilt=acceptChanges(rebuilt,proposed,actor);
     const computed=rebuilt.history.at(-1);rebuilt.history[rebuilt.history.length-1]={...raw,...computed};
   }
-  revisions.push({id:request.editId,recordId:original.id,time:new Date().toISOString(),actor,input:clone(input),before});
+  revisions.push({id:request.editId,recordId:original.id,time:new Date().toISOString(),actor,input:clone(request.input),appliedInput:clone(input),before});
   rebuilt.recordEdits=revisions;if(Object.hasOwn(current,'activeDraft'))rebuilt.activeDraft=clone(current.activeDraft);return rebuilt;
 }

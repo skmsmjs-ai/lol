@@ -1,8 +1,9 @@
 // Inner-room comparison heuristic, not Riot MMR or an empirically calibrated skill scale.
 export const MODEL_VERSION = 'role-cs-optional-2026-10-04-v3';
-export const RATING_VERSION = 'tier-sensitivity-2026-10-04-v5';
+export const RATING_VERSION = 'tier-role-sensitivity-2026-10-04-v6';
 // Apply the gain when interpreting stored corrections, so old originals need no replay.
 export const TIER_SENSITIVITY = 15;
+export const ROLE_TIER_SENSITIVITY = 60;
 export const ROLES = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
 export const ROLE_KR = { TOP: '탑', JG: '정글', MID: '미드', ADC: '원딜', SUP: '서포터' };
 export const PRIOR = [1, 1.08, 1, .95];
@@ -18,7 +19,7 @@ export function estimatedTier(player) {
   return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * Number(player.rating || 0), -.5, 10);
 }
 export function roleTier(player, role) {
-  return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * (Number(player.rating || 0) + Number(player.roleRating?.[role] || 0)), -.5, 10);
+  return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * Number(player.rating || 0) - ROLE_TIER_SENSITIVITY * Number(player.roleRating?.[role] || 0), -.5, 10);
 }
 export function tierCorrection(player) { return estimatedTier(player) - Number(player.baseTier ?? player.tier ?? 3); }
 // Historical points retain their original meaning. Add a display-only current point
@@ -120,6 +121,7 @@ export function applyRatingUpdate(state, record) {
   record.ratingApplied=true;
   record.ratingVersion = RATING_VERSION;
   record.tierSensitivity = TIER_SENSITIVITY;
+  record.roleTierSensitivity = ROLE_TIER_SENSITIVITY;
   const winnerKnown = record.winner === 'A' || record.winner === 'B';
   const before = [...state.model.weights];
   const y = record.winner === 'A' ? 1 : 0;

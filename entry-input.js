@@ -1,4 +1,4 @@
-import { ROLES, ROLE_KR, parseDuration } from './role-model.js?v=6-cs15-20261004';
+import { ROLES, ROLE_KR, parseDuration } from './role-model.js?v=6-role60-merge-20261004';
 
 const names = new Intl.Collator('ko', { numeric: true, sensitivity: 'variant' });
 export const comparePlayerNames = (a, b) => names.compare(a.name.normalize('NFC'), b.name.normalize('NFC')) || String(a.id).localeCompare(String(b.id));
