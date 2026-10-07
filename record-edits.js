@@ -5,7 +5,7 @@ const ordered=x=>Array.isArray(x)?x.map(ordered):x&&typeof x==='object'?Object.f
 export const sameEditInput=(a,b)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const same=sameEditInput;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const derived=p=>({rating:p.rating,roleRating:clone(p.roleRating),stats:clone(p.stats)});
+const derived=p=>({rating:p.rating,roleRating:clone(p.roleRating),stats:clone(p.stats),skillRating:clone(p.skillRating||null)});
 // Three-way merge user-entered fields only. Calculation metadata and names
 // may change during replay without changing the user's original input.
 export function editableRecord(h){
@@ -29,7 +29,7 @@ function decrement(obj,key){if(!Number.isSafeInteger(obj[key])||obj[key]<1)throw
 function undo(next,h){
   if(h.ratingApplied===false)return;
   if(h.ratingBefore){
-    for(const [id,value] of Object.entries(h.ratingBefore.players)){const p=next.roster.find(p=>p.id===id);if(!p)throw safeFailure();Object.assign(p,clone(value));}
+    for(const [id,value] of Object.entries(h.ratingBefore.players)){const p=next.roster.find(p=>p.id===id);if(!p)throw safeFailure();if(!Object.hasOwn(value,'skillRating'))delete p.skillRating;Object.assign(p,clone(value));}
     next.model=clone(h.ratingBefore.model);return;
   }
   if(!['role-five-inputs-2026-10-01-v1','role-available-inputs-2026-10-03-v2','role-cs-optional-2026-10-04-v3'].includes(h.modelVersion)||!Array.isArray(h.weightsBefore)||!Number.isFinite(h.predictedAWin))throw safeFailure();

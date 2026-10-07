@@ -1,4 +1,4 @@
-import { ROLES, validateGameStats, deriveResult, applyRatingUpdate, roleTier, estimatedTier, recordPendingReasons } from './role-model.js';
+import { ROLES, validateGameStats, deriveResult, applyRatingUpdate, roleTier, estimatedTier, recordPendingReasons, ensureSkill, teamPrediction, RATING_VERSION } from './role-model.js';
 const copy=value=>JSON.parse(JSON.stringify(value));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export class HttpError extends Error {constructor(status,message,data={}){super(message);this.status=status;this.data=data;}}
@@ -22,7 +22,8 @@ export function acceptChanges(current,incoming,role){
   for(const [id,h] of oldHistory)if(!same(newHistory.get(id),h))throw new HttpError(403,'기존 경기 원본은 덮어쓰거나 삭제할 수 없습니다.');
   const oldRoster=new Map(current.roster.map(p=>[p.id,p]));
   if(current.roster.some(p=>!incoming.roster.some(q=>p.id===q.id)))throw new HttpError(403,'기존 선수 자료는 백업 없이 삭제할 수 없습니다.');
-  const next=copy(current);next.version=6;next.lastBackup=incoming.lastBackup??next.lastBackup;
+  const next=copy(current);next.version=6;
+  if(incoming.history.length>current.history.length&&current.history.length&&current.model.algorithm!==RATING_VERSION)throw new HttpError(422,'계산 모델 업데이트 중입니다. 입력은 보존했습니다. 잠시 뒤 다시 저장해 주세요.');next.lastBackup=incoming.lastBackup??next.lastBackup;
   next.roster=incoming.roster.map(p=>{
     const old=oldRoster.get(p.id);
     if(old)return {...copy(old),name:p.name,baseTier:p.baseTier,possible:copy(p.possible)};
@@ -31,19 +32,21 @@ export function acceptChanges(current,incoming,role){
   for(const raw of incoming.history.filter(h=>!oldHistory.has(h.id))){
     const error=validateGameStats(raw.stats,raw.duration,true);if(error)throw new HttpError(422,error==='게임시간'?'게임 시간을 분:초로 입력해 주세요.':error);
     const idSet=new Set(),roles={},players=new Map(next.roster.map(p=>[p.id,p]));
+    const preSkill=new Map(next.roster.map(p=>[p.id,copy(p.skillRating||null)]));
+    for(const id of new Set(ROLES.flatMap(r=>[raw.roles?.[r]?.aId,raw.roles?.[r]?.bId])))if(players.has(id))ensureSkill(players.get(id));
     const tier=roleTier;
     for(const r of ROLES){const m=raw.roles?.[r],a=players.get(m?.aId),b=players.get(m?.bId);if(!a||!b)throw new HttpError(422,'경기의 선수 정보를 확인해 주세요.');idSet.add(a.id);idSet.add(b.id);roles[r]={aId:a.id,bId:b.id,aName:a.name,bName:b.name,aTier:tier(a,r),bTier:tier(b,r)};}
     if(idSet.size!==10)throw new HttpError(422,'한 경기에는 서로 다른 선수 10명이 필요합니다.');
     const bot=(adc,sup)=>.6*Math.min(adc,sup)+.4*Math.max(adc,sup);
     const feature=['TOP','JG','MID'].map(r=>(roles[r].bTier-roles[r].aTier)/3);feature.push((bot(roles.ADC.bTier,roles.SUP.bTier)-bot(roles.ADC.aTier,roles.SUP.aTier))/3);
-    let predictedAWin=1/(1+Math.exp(-feature.reduce((n,f,i)=>n+f*next.model.weights[i],0)));
+    let predictedAWin=teamPrediction(next.roster,roles,raw.rolesConfirmed!==false).predictedAWin;
     const modes=Object.fromEntries(ROLES.map(r=>[r,raw.roleAdv?.[r]==='U'?'U':'S']));
     const record={id:raw.id,time:raw.source==='past'&&raw.time===null?null:typeof raw.time==='string'&&Number.isFinite(Date.parse(raw.time))?raw.time:new Date().toISOString(),loggedAt:raw.loggedAt&&Number.isFinite(Date.parse(raw.loggedAt))?raw.loggedAt:new Date().toISOString(),source:raw.source==='past'?'past':'live',plan:Number.isSafeInteger(raw.plan)?raw.plan:null,winner:['A','B'].includes(raw.winner)?raw.winner:null,duration:raw.duration,roles,stats:copy(raw.stats),feature,predictedAWin,...deriveResult(raw.stats,raw.duration,modes)};
     if(raw.sourcePhoto&&Number.isSafeInteger(raw.sourcePhoto.photo)&&/^[0-9a-f]{64}$/.test(raw.sourcePhoto.sha256))record.sourcePhoto=copy(raw.sourcePhoto);
     record.rolesConfirmed=raw.rolesConfirmed!==false;
     record.pendingReasons=recordPendingReasons(record);
-    if(record.rolesConfirmed===false){const mean=side=>ROLES.reduce((n,r)=>n+estimatedTier(players.get(roles[r][side==='A'?'aId':'bId'])),0)/5;record.predictedAWin=1/(1+Math.exp(-(mean('B')-mean('A'))/1.2));record.roleAssessmentProvisional=true;for(const r of ROLES)record.roleEvidenceWeight[r]*=.5;}
-    record.ratingBefore={model:copy(next.model),players:Object.fromEntries([...idSet].map(id=>{const p=players.get(id);return [id,{rating:p.rating,roleRating:copy(p.roleRating),stats:copy(p.stats)}];}))};
+    record.roleAssessmentProvisional=record.rolesConfirmed===false;
+    record.ratingBefore={model:copy(next.model),players:Object.fromEntries([...idSet].map(id=>{const p=players.get(id);return [id,{rating:p.rating,roleRating:copy(p.roleRating),stats:copy(p.stats),skillRating:copy(preSkill.get(id)||null)}];}))};
     applyRatingUpdate(next,record);
   }
   if(incoming.activeDraft){

@@ -1,168 +1,69 @@
-// Inner-room comparison heuristic, not Riot MMR or an empirically calibrated skill scale.
-export const MODEL_VERSION = 'role-cs-optional-2026-10-04-v3';
-export const RATING_VERSION = 'tier-role-sensitivity-2026-10-04-v6';
-// Apply the gain when interpreting stored corrections, so old originals need no replay.
-export const TIER_SENSITIVITY = 15;
-export const ROLE_TIER_SENSITIVITY = 60;
-export const ROLES = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
-export const ROLE_KR = { TOP: '탑', JG: '정글', MID: '미드', ADC: '원딜', SUP: '서포터' };
-export const PRIOR = [1, 1.08, 1, .95];
-export const ROLE_RULES = {
-  TOP: { growth: .60, participation: .15, efficiency: .25, economy: { gold: .40, cs: .30, level: .30 }, evidence: .45, definition: '상대 탑보다 골드·CS·레벨 성장을 유지하면서 교전에 기여합니다.' },
-  JG: { growth: .40, participation: .35, efficiency: .25, economy: { gold: .45, cs: .30, level: .25 }, evidence: .35, definition: '정글 성장을 유지하면서 팀의 킬에 참여합니다.' },
-  MID: { growth: .50, participation: .25, efficiency: .25, economy: { gold: .45, cs: .30, level: .25 }, evidence: .45, definition: '골드·CS·레벨 성장과 교전 참여를 함께 확보합니다.' },
-  ADC: { growth: .65, participation: .15, efficiency: .20, economy: { gold: .50, cs: .35, level: .15 }, evidence: .40, definition: 'CS와 골드를 꾸준히 확보하고 교전에서 KDA 효율을 유지합니다.' },
-  SUP: { growth: .10, participation: .60, efficiency: .30, economy: { gold: .60, cs: 0, level: .40 }, evidence: .25, definition: '팀의 킬에 함께 참여하고 KDA 효율을 유지합니다. CS는 평가하지 않습니다.' }
+// Team-outcome core: Weng & Lin (JMLR 2011), two-team Bradley–Terry update.
+// Role-stat comparison and its bounded auxiliary shift are disclosed app heuristics.
+import * as legacy from './legacy-role-model.js';
+export const ROLES=legacy.ROLES,ROLE_KR=legacy.ROLE_KR,PRIOR=[1,1,1,1];
+export const MODEL_VERSION='role-evidence-2026-10-07-v4';
+export const RATING_VERSION='weng-lin-roles-2026-10-07-v7';
+export const TIER_SENSITIVITY=1,ROLE_TIER_SENSITIVITY=1;
+export const RATING_POLICY={roleVariance:4,generalVariance:1,teamNoiseVariance:3.2,performanceCap:.75,performancePrior:1,gamma:.5};
+export const ROLE_RULES={
+ TOP:{growth:.65,participation:.10,efficiency:.10,damage:.15,economy:{gold:.50,cs:.25,level:.25},evidence:.55,required:['gold','level'],definition:'골드·레벨로 성장 유지, 피해량·교전 관여로 확인 가능한 압박을 비교합니다.'},
+ JG:{growth:.30,participation:.45,efficiency:.15,damage:.10,economy:{gold:.55,cs:.20,level:.25},evidence:.40,required:['gold','level'],definition:'팀 교전 관여와 골드·레벨 성장을 비교합니다. 오브젝트·갱킹의 질은 이 수치만으로 확정하지 않습니다.'},
+ MID:{growth:.35,participation:.25,efficiency:.10,damage:.30,economy:{gold:.65,cs:.25,level:.10},evidence:.55,required:['gold'],definition:'챔피언 피해량·교전 관여와 골드 성장을 비교합니다. 로밍의 질은 별도로 알 수 없습니다.'},
+ ADC:{growth:.40,participation:.10,efficiency:.10,damage:.40,economy:{gold:.65,cs:.30,level:.05},evidence:.55,required:['gold'],definition:'챔피언 피해량과 골드·CS 성장을 중심으로 봅니다. 챔피언·게임 흐름 차이까지 설명하는 지표는 아닙니다.'},
+ SUP:{growth:0,participation:.70,efficiency:.30,damage:0,economy:{gold:0,cs:0,level:0},evidence:.35,required:[],definition:'어시스트 관여와 데스 대비 어시스트 효율을 비교합니다. 골드·CS·피해량·킬 수 자체로 서포터를 평가하지 않습니다.'}
 };
-const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-export function estimatedTier(player) {
-  return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * Number(player.rating || 0), -.5, 10);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),sigmoid=x=>1/(1+Math.exp(-clamp(x,-30,30))),base=p=>Number(p.baseTier??p.tier??3);
+const clone=x=>JSON.parse(JSON.stringify(x));
+export const parseDuration=legacy.parseDuration,validStat=legacy.validStat,validateGameStats=legacy.validateGameStats,recordPendingReasons=legacy.recordPendingReasons;
+const fresh=(variance)=>({delta:0,variance,games:0,performanceSum:0,performanceWeight:0});
+export function ensureSkill(p){if(p.skillRating?.version!==RATING_VERSION)p.skillRating={version:RATING_VERSION,general:fresh(RATING_POLICY.generalVariance),roles:Object.fromEntries(ROLES.map(r=>[r,fresh(RATING_POLICY.roleVariance)]))};return p.skillRating;}
+const newSkill=p=>p.skillRating?.version===RATING_VERSION;
+export function performanceShift(p,r){const s=p.skillRating?.roles?.[r];return newSkill(p)&&s?RATING_POLICY.performanceCap*s.performanceSum/(RATING_POLICY.performancePrior+s.performanceWeight):0;}
+export function roleStrength(p,r){if(!newSkill(p))return -legacy.roleTier(p,r);return -base(p)+p.skillRating.general.delta+(p.skillRating.roles[r]?.delta||0)+performanceShift(p,r);}
+export function roleTier(p,r){return r&&ROLES.includes(r)?clamp(-roleStrength(p,r),-.5,10):estimatedTier(p);}
+export function estimatedTier(p){if(!newSkill(p))return legacy.estimatedTier(p);const s=p.skillRating,n=ROLES.reduce((n,r)=>n+s.roles[r].games,0),delta=n?ROLES.reduce((v,r)=>v+s.roles[r].delta*s.roles[r].games,0)/n:0;return clamp(base(p)-s.general.delta-delta,-.5,10);}
+export const tierCorrection=p=>estimatedTier(p)-base(p);
+export function roleUncertainty(p,r){if(!newSkill(p))return Math.sqrt(RATING_POLICY.roleVariance);return Math.sqrt(p.skillRating.roles[r].variance+(p.skillRating.general.games?p.skillRating.general.variance:0));}
+export function roleEvidence(p,r){const s=p.skillRating?.roles?.[r];return newSkill(p)?{games:s.games,observations:s.performanceWeight,uncertainty:roleUncertainty(p,r)}:{games:p.stats?.role?.[r]?.games||0,observations:0,uncertainty:Math.sqrt(RATING_POLICY.roleVariance)};}
+export function tierTrendPoints(p){const points=(p.timeline||[]).filter(x=>Number.isFinite(Number(x.tier))).map(x=>({...x})).sort((a,b)=>new Date(a.time)-new Date(b.time)),last=points.at(-1),current=Number(estimatedTier(p).toFixed(4));if(last&&Math.abs(last.tier-current)>.0001)points.push({time:last.time,tier:current,source:'current-model',derived:true});return points.slice(-40);}
+const contrast=(a,b,prior)=>Math.tanh(Math.log((a+prior)/(b+prior))/Math.log(2));
+export function assessRole(role,stats,duration){
+ const rule=ROLE_RULES[role],a=stats?.[role]?.A,b=stats?.[role]?.B;if(!rule||!a||!b)return null;
+ const seconds=parseDuration(duration),minutes=seconds?seconds/60:null,scale=minutes||30;
+ const known=(s,k)=>Number.isSafeInteger(s?.[k])&&s[k]>=(k==='level'?1:0)&&s[k]<=(k==='level'?20:['gold','damage'].includes(k)?1000000:10000),paired=k=>known(a,k)&&known(b,k);
+ const total=(side,key,rs=ROLES)=>rs.every(r=>known(stats?.[r]?.[side],key))?rs.reduce((sum,r)=>sum+stats[r][side][key],0):null;
+ // Team shares reduce the common rich/winning-team effect. If a whole team total
+ // is unavailable, compare the observed pair with lower evidence, never fill zeros.
+ const normalized=(key,prior,rs=ROLES)=>{if(!paired(key))return null;const ta=total('A',key,rs),tb=total('B',key,rs);return ta>0&&tb>0?contrast(a[key]/ta,b[key]/tb,prior):contrast(a[key]/scale,b[key]/scale,key==='damage'?500:key==='gold'?100:1);};
+ const ka=total('A','k'),kb=total('B','k'),support=role==='SUP';
+ const kp=support?(paired('a')&&ka>0&&kb>0?a.a/ka-b.a/kb:paired('a')?contrast(a.a/scale,b.a/scale,.25):null):(paired('k')&&paired('a')&&ka>0&&kb>0?(a.k+a.a)/ka-(b.k+b.a)/kb:null);
+ const efficiency=support?(paired('a')&&paired('d')?contrast(Math.log1p(a.a/(a.d+3)),Math.log1p(b.a/(b.d+3)),.5):null):['k','d','a'].every(paired)?contrast(Math.log1p((a.k+a.a)/(a.d+3)),Math.log1p((b.k+b.a)/(b.d+3)),.5):null;
+ const values={gold:normalized('gold',.03,ROLES.filter(r=>r!=='SUP')),cs:normalized('cs',.025,ROLES.filter(r=>r!=='SUP')),level:paired('level')?Math.tanh((a.level-b.level)/3):null,participation:kp,efficiency,damage:normalized('damage',.03,ROLES.filter(r=>r!=='SUP'))};
+ if(support){values.gold=values.cs=values.level=values.damage=null;if(paired('a')&&a.a===0&&b.a===0)values.participation=values.efficiency=null;}
+ const weights={...Object.fromEntries(Object.entries(rule.economy).map(([k,w])=>[k,w*rule.growth])),participation:rule.participation,efficiency:rule.efficiency,damage:rule.damage};
+ const observed=Object.keys(weights).filter(k=>weights[k]>0&&values[k]!==null),coverage=observed.reduce((s,k)=>s+weights[k],0);if(!coverage)return null;
+ const score=clamp(observed.reduce((s,k)=>s+weights[k]*values[k],0)/coverage,-1,1),eligible=1-weights.cs;
+ let completeness=clamp((coverage-(values.cs!==null?weights.cs:0))/eligible,0,1),contextComplete=ka!==null&&kb!==null&&['gold','damage'].every(k=>weights[k]===0||values[k]===null||total('A',k,ROLES.filter(r=>r!=='SUP'))>0&&total('B',k,ROLES.filter(r=>r!=='SUP'))>0);
+ if(!contextComplete)completeness*=.75;
+ const evidence=rule.evidence*completeness*(minutes?Math.min(1,minutes/20):.75),adv=score>=.10?'A':score<=-.10?'B':'E';
+ const labels={gold:'팀 내 골드 비중',cs:'팀 내 CS 비중',level:'레벨',participation:support?'어시스트 관여':'킬 관여',efficiency:support?'어시·데스 효율':'교전 효율',damage:'팀 내 피해량 비중'};
+ return {modelVersion:MODEL_VERSION,score,adv,label:adv==='E'?'수치상 비슷':`${adv}팀 수치상 우세`,completeness,observedWeight:coverage,eligibleWeight:eligible,evidence,parts:observed.map(k=>({metric:k,label:labels[k],diff:values[k],weight:weights[k]/coverage})),growthParts:values,minutes,definition:rule.definition,observedMetrics:observed,contextComplete,rates:Object.fromEntries([['A',a],['B',b]].map(([side,s])=>[side,Object.fromEntries(['cs','gold','damage'].map(k=>[k,minutes&&known(s,k)?s[k]/minutes:null]))]))};
 }
-export function roleTier(player, role) {
-  return clamp(Number(player.baseTier ?? player.tier ?? 3) - TIER_SENSITIVITY * Number(player.rating || 0) - ROLE_TIER_SENSITIVITY * Number(player.roleRating?.[role] || 0), -.5, 10);
-}
-export function tierCorrection(player) { return estimatedTier(player) - Number(player.baseTier ?? player.tier ?? 3); }
-// Historical points retain their original meaning. Add a display-only current point
-// if a sensitivity change makes the stored last estimate differ from today's estimate.
-export function tierTrendPoints(player) {
-  const points = (player.timeline || []).filter(x => Number.isFinite(Number(x.tier))).map(x => ({...x})).sort((a,b) => new Date(a.time) - new Date(b.time));
-  const last = points.at(-1), current = Number(estimatedTier(player).toFixed(4));
-  if (last && Math.abs(Number(last.tier) - current) > .0001) points.push({time:last.time,tier:current,source:'current-sensitivity',derived:true});
-  return points.slice(-40);
-}
-const sigmoid = x => 1 / (1 + Math.exp(-clamp(x, -30, 30)));
-export function parseDuration(value) {
-  if (typeof value !== 'string') return null;
-  const m = value.trim().match(/^(\d{1,3}):([0-5]\d)$/);
-  if (!m) return null;
-  const seconds = Number(m[1]) * 60 + Number(m[2]);
-  return seconds > 0 && seconds <= 180 * 60 ? seconds : null;
-}
-export function validStat(s) {
-  if (!s || !['k', 'd', 'a', 'cs', 'gold', 'level'].every(k => typeof s[k] === 'number' && Number.isSafeInteger(s[k]))) return false;
-  return ['k', 'd', 'a', 'cs', 'gold'].every(k => s[k] >= 0 && s[k] <= (k === 'gold' ? 1000000 : 10000)) && s.level >= 1 && s.level <= 20;
-}
-export function validateGameStats(stats, duration, allowMissing = true) {
-  if (duration && !parseDuration(duration)) return '게임시간';
-  for (const r of ROLES) for (const side of ['A','B']) for (const key of ['level','k','d','a','cs','gold','damage']) {
-    const v=stats?.[r]?.[side]?.[key];
-    if (v==null && (allowMissing || key==='damage')) continue;
-    if (!Number.isSafeInteger(v) || v<(key==='level'?1:0) || v>(key==='level'?20:['gold','damage'].includes(key)?1000000:10000)) return `${ROLE_KR[r]} ${side}팀: 입력한 수치는 허용 범위의 정수여야 합니다.`;
-  }
-  for (const side of ['A','B']) {
-    if (!ROLES.every(r=>Number.isSafeInteger(stats?.[r]?.[side]?.k))) continue;
-    const total=ROLES.reduce((n,r)=>n+stats[r][side].k,0);
-    if (ROLES.some(r=>Number.isSafeInteger(stats[r][side].a)&&stats[r][side].k+stats[r][side].a>total)) return `${side}팀의 K+A가 팀 전체 킬보다 큽니다. 킬·어시스트를 확인해 주세요.`;
-  }
-  return null;
-}
-// Incomplete originals are stored with nulls, without inventing inputs or skill evidence.
-export function recordPendingReasons(record) {
-  const missing=[];
-  if (!record.time) missing.push('경기 날짜');
-  if (record.rolesConfirmed===false) missing.push('역할군 확인');
-  const labels={level:'레벨',k:'킬',d:'데스',a:'어시스트',cs:'CS',gold:'골드'};
-  for (const [key,label] of Object.entries(labels)) if (ROLES.some(r=>['A','B'].some(side=>record.stats?.[r]?.[side]?.[key]==null))) missing.push(label);
-  return missing;
-}
-// Signed bounded contrast. Pseudocounts tame tiny counts; no missing value becomes zero.
-const contrast = (a, b, prior) => Math.tanh(Math.log((a + prior) / (b + prior)) / Math.log(2));
-// Compare only jointly observed metrics; renormalize their weights, never impute zero.
-export function assessRole(role, stats, duration) {
-  const rule=ROLE_RULES[role],a=stats?.[role]?.A,b=stats?.[role]?.B;
-  if (!rule || !a || !b) return null;
-  const minutes=parseDuration(duration)?parseDuration(duration)/60:null, scale=minutes||30;
-  const known=(s,k)=>Number.isSafeInteger(s?.[k])&&s[k]>=(k==='level'?1:0)&&s[k]<=(k==='level'?20:['gold','damage'].includes(k)?1000000:10000);
-  const paired=k=>known(a,k)&&known(b,k);
-  const total=side=>ROLES.every(r=>known(stats?.[r]?.[side],'k'))?ROLES.reduce((n,r)=>n+stats[r][side].k,0):null;
-  const ka=total('A'),kb=total('B'), kda=['k','d','a'].every(paired);
-  const kpKnown=paired('k')&&paired('a')&&ka>0&&kb>0&&a.k+a.a<=ka&&b.k+b.a<=kb;
-  const values={gold:paired('gold')?contrast(a.gold/scale,b.gold/scale,100):null,cs:paired('cs')?contrast(a.cs/scale,b.cs/scale,1):null,level:paired('level')?Math.tanh((a.level-b.level)/3):null,efficiency:kda?contrast(Math.log1p((a.k+a.a)/Math.max(1,a.d)),Math.log1p((b.k+b.a)/Math.max(1,b.d)),.5):null,participation:kpKnown?(a.k+a.a)/ka-(b.k+b.a)/kb:null,damage:paired('damage')?contrast(a.damage/scale,b.damage/scale,500):null};
-  // Damage is optional and role-specific. Support damage/CS are not skill proxies.
-  const damageWeight={TOP:.15,JG:.10,MID:.20,ADC:.25,SUP:0}[role];
-  const weights={...Object.fromEntries(Object.entries(rule.economy).map(([k,w])=>[k,w*rule.growth])),participation:rule.participation,efficiency:rule.efficiency};
-  if(values.damage!==null&&damageWeight>0){for(const k of Object.keys(weights))weights[k]*=1-damageWeight;weights.damage=damageWeight;}
-  const observed=Object.keys(weights).filter(k=>weights[k]>0&&values[k]!==null),coverage=observed.reduce((n,k)=>n+weights[k],0);
-  if(!coverage)return null;
-  const score=observed.reduce((n,k)=>n+weights[k]*values[k],0)/coverage;
-  // CS is supplementary: omit its weight from both the score and evidence denominator.
-  // Other missing evidence still lowers confidence; no value is synthesized.
-  const eligibleWeight=1-(values.cs===null?(weights.cs||0):0);
-  const evidenceCoverage=clamp(coverage/eligibleWeight,0,1);
-  const evidence=rule.evidence*evidenceCoverage*(minutes?Math.min(1,minutes/20):.75);
-  const adv=score>=.10?'A':score<=-.10?'B':'E';
-  const labels={gold:'골드',cs:'CS',level:'레벨',participation:'킬 관여',efficiency:'KDA 효율',damage:'챔피언 피해량'};
-  const parts=observed.map(k=>({metric:k,label:labels[k],diff:values[k],weight:weights[k]/coverage}));
-  return {modelVersion:MODEL_VERSION,score,adv,label:adv==='E'?'수치상 비슷':`${adv}팀 수치상 우세`,completeness:evidenceCoverage,observedWeight:coverage,eligibleWeight,evidence,parts,growthParts:values,minutes,definition:rule.definition,observedMetrics:observed,rates:Object.fromEntries([['A',a],['B',b]].map(([side,s])=>[side,Object.fromEntries(['cs','gold','damage'].map(k=>[k,minutes&&known(s,k)?s[k]/minutes:null]))]))};
-}
-export function deriveResult(stats, duration, modes = {}) {
-  const roleAdv = {}, roleObserved = {}, roleEvidenceWeight = {}, roleAdvSource = {}, statAssessment = {};
-  for (const r of ROLES) {
-    const x = assessRole(r, stats, duration);
-    if (x) statAssessment[r] = x;
-    // Historical manual choices remain readable. New inputs only offer automatic or exclude.
-    if (!x || modes[r] === 'U') {
-      roleAdv[r] = 'U'; roleObserved[r] = null; roleEvidenceWeight[r] = 0; roleAdvSource[r] = 'unknown';
-    } else {
-      roleAdv[r] = x.adv; roleObserved[r] = clamp(.5 + .5 * x.score, .15, .85); roleEvidenceWeight[r] = x.evidence; roleAdvSource[r] = 'available-inputs';
-    }
-  }
-  return { modelVersion: MODEL_VERSION, roleAdv, roleObserved, roleEvidenceWeight, roleAdvSource, statAssessment };
-}
-export function applyRatingUpdate(state, record) {
-  if (record.ratingApplied===false || (record.modelVersion==='role-five-inputs-2026-10-01-v1' && record.pendingReasons?.length)) { record.ratingApplied=false; record.loggedAt ||= new Date().toISOString(); state.history.push(record); return; }
-  if(!['A','B'].includes(record.winner)&&!ROLES.some(r=>(record.roleEvidenceWeight?.[r]||0)>0)){record.ratingApplied=false;record.loggedAt ||= new Date().toISOString();state.history.push(record);return;}
-  if(record.modelVersion===MODEL_VERSION&&record.rolesConfirmed===false&&!record.roleAssessmentProvisional){
-    const players=new Map(state.roster.map(p=>[p.id,p]));
-    const mean=side=>ROLES.reduce((n,r)=>n+estimatedTier(players.get(record.roles[r][side==='A'?'aId':'bId'])),0)/5;
-    record.predictedAWin=sigmoid((mean('B')-mean('A'))/1.2);
-    record.roleAssessmentProvisional=true;for(const r of ROLES)record.roleEvidenceWeight[r]*=.5;
-  }
-  record.ratingApplied=true;
-  record.ratingVersion = RATING_VERSION;
-  record.tierSensitivity = TIER_SENSITIVITY;
-  record.roleTierSensitivity = ROLE_TIER_SENSITIVITY;
-  const winnerKnown = record.winner === 'A' || record.winner === 'B';
-  const before = [...state.model.weights];
-  const y = record.winner === 'A' ? 1 : 0;
-  // Replay historical calculations using their recorded confirmation state.
-  // An old provisional flag may remain after the roles were confirmed.
-  const provisionalRoles=record.rolesConfirmed===false&&['role-available-inputs-2026-10-03-v2',MODEL_VERSION].includes(record.modelVersion);
-  if (winnerKnown && !provisionalRoles) {
-    const lr = .045 / Math.sqrt(1 + state.model.gamesLearned / 20);
-    for (let i = 0; i < 4; i++) state.model.weights[i] = clamp(before[i] + lr * ((y - record.predictedAWin) * record.feature[i] + .025 * (PRIOR[i] - before[i])), .40, 1.80);
-  }
-  const players = new Map(state.roster.map(p => [p.id, p]));
-  for (const r of ROLES) {
-    const m = record.roles[r], pa = players.get(m.aId), pb = players.get(m.bId);
-    if (!pa || !pb) throw new Error('선수를 찾을 수 없습니다.');
-    for (const [p, side] of [[pa, 'A'], [pb, 'B']]) {
-      if (winnerKnown) {
-        const k = .075 / Math.sqrt(1 + p.stats.games / 20);
-        p.rating = clamp(p.rating + k * (side === 'A' ? 1 : -1) * (y - record.predictedAWin), -1.5, 1.5);
-        if (record.winner === side) p.stats.wins++; else p.stats.losses++;
-      }
-      p.stats.games++;
-    }
-    const actual = record.roleObserved?.[r], evidence = record.roleEvidenceWeight?.[r] || 0;
-    if (actual === null || actual === undefined || evidence <= 0) continue;
-    const expected = sigmoid((m.bTier - m.aTier) / 1.2);
-    const count = (pa.stats.role[r].games + pb.stats.role[r].games) / 2;
-    // Never transfer a role-stat proxy into the player's global skill estimate.
-    const delta = clamp(.12 * evidence * (actual - expected) / Math.sqrt(1 + count / 18), -.04, .04);
-    pa.roleRating[r] = clamp(pa.roleRating[r] + delta, -1.35, 1.35);
-    pb.roleRating[r] = clamp(pb.roleRating[r] - delta, -1.35, 1.35);
-    const sa = pa.stats.role[r], sb = pb.stats.role[r]; sa.games++; sb.games++;
-    if (record.roleAdv[r] === 'A') { sa.better++; sb.worse++; }
-    else if (record.roleAdv[r] === 'B') { sa.worse++; sb.better++; }
-    else { sa.even++; sb.even++; }
-  }
-  state.model.gamesLearned++;
-  record.weightsBefore = before; record.weightsAfter = [...state.model.weights];
-  record.loggedAt ||= new Date().toISOString();
-  for (const id of new Set(ROLES.flatMap(r => [record.roles[r].aId, record.roles[r].bId]))) {
-    const p = players.get(id); p.timeline ||= [];
-    p.timeline.push({ time: record.loggedAt, tier: Number(estimatedTier(p).toFixed(4)), source: record.source || 'live', gameId: record.id, tierSensitivity: TIER_SENSITIVITY });
-  }
-  state.history.push(record);
+export function deriveResult(stats,duration,modes={}){const roleAdv={},roleObserved={},roleEvidenceWeight={},roleAdvSource={},statAssessment={};for(const r of ROLES){const x=assessRole(r,stats,duration);if(x)statAssessment[r]=x;if(!x||modes[r]==='U'){roleAdv[r]='U';roleObserved[r]=null;roleEvidenceWeight[r]=0;roleAdvSource[r]='unknown';}else{roleAdv[r]=x.adv;roleObserved[r]=x.score;roleEvidenceWeight[r]=x.evidence;roleAdvSource[r]='role-proxy';}}return {modelVersion:MODEL_VERSION,roleAdv,roleObserved,roleEvidenceWeight,roleAdvSource,statAssessment};}
+export function teamPrediction(roster,roles,confirmed=true){const players=new Map(roster.map(p=>[p.id,p]));const teams=Object.fromEntries(['A','B'].map(side=>[side,ROLES.map(r=>{const p=players.get(roles[r]?.[side==='A'?'aId':'bId']);if(!p)throw new Error('선수 정보를 확인해 주세요.');const skill=confirmed?{mean:roleStrength(p,r),variance:roleUncertainty(p,r)**2}:{mean:-estimatedTier(p),variance:newSkill(p)?p.skillRating.general.variance:RATING_POLICY.generalVariance};return {id:p.id,role:r,...skill};})]));const means=Object.fromEntries(['A','B'].map(s=>[s,teams[s].reduce((n,p)=>n+p.mean,0)])),vars=Object.fromEntries(['A','B'].map(s=>[s,teams[s].reduce((n,p)=>n+p.variance,0)])),c=Math.sqrt(vars.A+vars.B+2*RATING_POLICY.teamNoiseVariance),gap=means.A-means.B;return {predictedAWin:sigmoid(gap/c),scale:c,strengthGap:gap,teams,teamMeans:means,teamVariances:vars,feature:ROLES.slice(0,3).map((r,i)=>teams.A[i].mean-teams.B[i].mean).concat((teams.A[3].mean+teams.A[4].mean)-(teams.B[3].mean+teams.B[4].mean))};}
+export function applyRatingUpdate(state,record){
+ if(record.modelVersion!==MODEL_VERSION)return legacy.applyRatingUpdate(state,record);
+ const winnerKnown=['A','B'].includes(record.winner),confirmed=record.rolesConfirmed!==false,hasStats=confirmed&&ROLES.some(r=>(record.roleEvidenceWeight?.[r]||0)>0);
+ if(!winnerKnown&&!hasStats){record.ratingApplied=false;record.loggedAt||=new Date().toISOString();state.history.push(record);return;}
+ const players=new Map(state.roster.map(p=>[p.id,p]));for(const id of new Set(ROLES.flatMap(r=>[record.roles[r].aId,record.roles[r].bId])))ensureSkill(players.get(id));
+ const prediction=teamPrediction(state.roster,record.roles,confirmed);record.predictedAWin=prediction.predictedAWin;record.feature=prediction.feature;record.predictionScale=prediction.scale;
+ if(winnerKnown){const residual=(record.winner==='A'?1:0)-prediction.predictedAWin,curvature=prediction.predictedAWin*(1-prediction.predictedAWin);for(const side of ['A','B'])for(const entry of prediction.teams[side]){const p=players.get(entry.id),q=confirmed?p.skillRating.roles[entry.role]:p.skillRating.general,v=q.variance;q.delta+=v/prediction.scale*(side==='A'?1:-1)*residual;q.variance=Math.max(.05,v*(1-RATING_POLICY.gamma*v/(prediction.scale**2)*curvature));q.games++;}}
+ for(const r of ROLES){const a=players.get(record.roles[r].aId),b=players.get(record.roles[r].bId);for(const[p,side]of[[a,'A'],[b,'B']]){p.stats.games++;if(winnerKnown)p.stats[record.winner===side?'wins':'losses']++;}
+  const evidence=record.roleEvidenceWeight?.[r]||0,observed=record.roleObserved?.[r];if(!confirmed||evidence<=0||observed==null)continue;
+  for(const[p,sign]of[[a,1],[b,-1]]){const q=p.skillRating.roles[r];q.performanceSum+=sign*evidence*observed;q.performanceWeight+=evidence;const st=p.stats.role[r];st.games++;st[record.roleAdv[r]==='E'?'even':record.roleAdv[r]===(sign===1?'A':'B')?'better':'worse']++;}
+ }
+ state.model.algorithm=RATING_VERSION;state.model.weights=[1,1,1,1];state.model.gamesLearned++;record.weightsBefore=record.ratingBefore?.model?.weights||[1,1,1,1];record.weightsAfter=[1,1,1,1];record.ratingVersion=RATING_VERSION;record.tierSensitivity=1;record.roleTierSensitivity=1;record.ratingApplied=true;record.roleAssessmentProvisional=!confirmed;record.loggedAt||=new Date().toISOString();
+ for(const id of new Set(ROLES.flatMap(r=>[record.roles[r].aId,record.roles[r].bId]))){const p=players.get(id);p.timeline||=[];p.timeline.push({time:record.loggedAt,tier:Number(estimatedTier(p).toFixed(4)),source:record.source||'live',gameId:record.id,ratingVersion:RATING_VERSION});}
+ state.history.push(record);
 }

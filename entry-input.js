@@ -1,4 +1,4 @@
-import { ROLES, ROLE_KR, parseDuration } from './role-model.js?v=6-role60-merge-20261004';
+import { ROLES, ROLE_KR, parseDuration } from './role-model.js?v=7-role-evidence-20261007';
 
 const names = new Intl.Collator('ko', { numeric: true, sensitivity: 'variant' });
 export const comparePlayerNames = (a, b) => names.compare(a.name.normalize('NFC'), b.name.normalize('NFC')) || String(a.id).localeCompare(String(b.id));
@@ -33,4 +33,15 @@ export function sameGameInput(a,b) {
   return ROLES.every(r=>['aId','bId'].every(k=>a.roles?.[r]?.[k]===b.roles?.[r]?.[k])
     &&(a.roleAdv?.[r]==='U')===(b.roleAdv?.[r]==='U')
     &&['A','B'].every(side=>['level','k','d','a','cs','gold','damage'].every(k=>(a.stats?.[r]?.[side]?.[k]??null)===(b.stats?.[r]?.[side]?.[k]??null))));
+}
+
+export function parseQuickStats(text){
+ const m=String(text).trim().match(/^(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)(.*)$/);if(!m)throw new Error('K/D/A를 6/2/20처럼 입력해 주세요.');
+ const keys=['damage','cs','gold','level'],tail=m[4].trim().replace(/^[:,]\s*/,'').split(/[\s,]+/).filter(Boolean);if(tail.length>4)throw new Error('K/D/A 뒤에는 피해량 CS 골드 레벨 순서로 입력해 주세요.');
+ const values={k:Number(m[1]),d:Number(m[2]),a:Number(m[3])};tail.forEach((v,i)=>{if(v!=='-'&&!/^\d+$/.test(v))throw new Error('수치는 정수로, 모르는 값은 -로 입력해 주세요.');values[keys[i]]=v==='-'?null:Number(v);});
+ for(const[k,v]of Object.entries(values)){if(v==null)continue;const min=k==='level'?1:0,max=k==='level'?20:['gold','damage'].includes(k)?1000000:10000;if(!Number.isSafeInteger(v)||v<min||v>max)throw new Error('입력 범위를 확인해 주세요.');}return values;
+}
+export function requiredRoleIssue(stats){
+ const required={TOP:['gold','level'],JG:['gold','level'],MID:['gold'],ADC:['gold'],SUP:[]};
+ for(const role of ROLES)for(const side of ['A','B'])for(const key of required[role])if(stats?.[role]?.[side]?.[key]==null)return {role,side,key,message:`${ROLE_KR[role]} ${side}팀의 ${key==='gold'?'골드':'레벨'}가 필요합니다. 확인이 어렵다면 '미확인 값은 나중에 보충'을 선택해 원본부터 저장할 수 있습니다.`};return null;
 }
