@@ -1,4 +1,4 @@
-import { cloudEndpoint } from './cloud-config.js?v=8-role-readings-20261007';
+import { cloudEndpoint } from './cloud-config.js?v=9-role-readings-20261007';
 const $ = selector => document.querySelector(selector);
 const clone = value => value===undefined?undefined:JSON.parse(JSON.stringify(value));
 const shared = state => { const value=clone(state); delete value.session; return value; };
