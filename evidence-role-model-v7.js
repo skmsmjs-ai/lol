@@ -1,12 +1,11 @@
 // Team-outcome core: Weng & Lin (JMLR 2011), two-team Bradley–Terry update.
 // Role-stat comparison and its bounded auxiliary shift are disclosed app heuristics.
 import * as legacy from './legacy-role-model.js';
-import * as previousEvidence from './evidence-role-model-v7.js';
 export const ROLES=legacy.ROLES,ROLE_KR=legacy.ROLE_KR,PRIOR=[1,1,1,1];
-export const MODEL_VERSION='role-calibration-2026-10-07-v5';
-export const RATING_VERSION='role-calibration-2026-10-07-v8';
+export const MODEL_VERSION='role-evidence-2026-10-07-v4';
+export const RATING_VERSION='weng-lin-roles-2026-10-07-v7';
 export const TIER_SENSITIVITY=1,ROLE_TIER_SENSITIVITY=1;
-export const RATING_POLICY={roleVariance:4,generalVariance:1,teamNoiseVariance:3.2,performanceCap:.75,performancePrior:1,gamma:.5,outcomeCap:.9};
+export const RATING_POLICY={roleVariance:4,generalVariance:1,teamNoiseVariance:3.2,performanceCap:.75,performancePrior:1,gamma:.5};
 export const ROLE_RULES={
  TOP:{growth:.65,participation:.10,efficiency:.10,damage:.15,economy:{gold:.50,cs:.25,level:.25},evidence:.55,required:['gold','level'],definition:'골드·레벨로 성장 유지, 피해량·교전 관여로 확인 가능한 압박을 비교합니다.'},
  JG:{growth:.30,participation:.45,efficiency:.15,damage:.10,economy:{gold:.55,cs:.20,level:.25},evidence:.40,required:['gold','level'],definition:'팀 교전 관여와 골드·레벨 성장을 비교합니다. 오브젝트·갱킹의 질은 이 수치만으로 확정하지 않습니다.'},
@@ -14,8 +13,6 @@ export const ROLE_RULES={
  ADC:{growth:.40,participation:.10,efficiency:.10,damage:.40,economy:{gold:.65,cs:.30,level:.05},evidence:.55,required:['gold'],definition:'챔피언 피해량과 골드·CS 성장을 중심으로 봅니다. 챔피언·게임 흐름 차이까지 설명하는 지표는 아닙니다.'},
  SUP:{growth:0,participation:.70,efficiency:.30,damage:0,economy:{gold:0,cs:0,level:0},evidence:.35,required:[],definition:'어시스트 관여와 데스 대비 어시스트 효율을 비교합니다. 골드·CS·피해량·킬 수 자체로 서포터를 평가하지 않습니다.'}
 };
-export function calibrationMultiplier(games){return games<5?3:games<15?2:1.5;}
-export function outcomeStep(variance,scale,residual,games){return RATING_POLICY.outcomeCap*Math.tanh(calibrationMultiplier(games)*variance/scale*residual/RATING_POLICY.outcomeCap);}
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),sigmoid=x=>1/(1+Math.exp(-clamp(x,-30,30))),base=p=>Number(p.baseTier??p.tier??3);
 const clone=x=>JSON.parse(JSON.stringify(x));
 export const parseDuration=legacy.parseDuration,validStat=legacy.validStat,validateGameStats=legacy.validateGameStats,recordPendingReasons=legacy.recordPendingReasons;
@@ -57,20 +54,16 @@ export function assessRole(role,stats,duration){
 export function deriveResult(stats,duration,modes={}){const roleAdv={},roleObserved={},roleEvidenceWeight={},roleAdvSource={},statAssessment={};for(const r of ROLES){const x=assessRole(r,stats,duration);if(x)statAssessment[r]=x;if(!x||modes[r]==='U'){roleAdv[r]='U';roleObserved[r]=null;roleEvidenceWeight[r]=0;roleAdvSource[r]='unknown';}else{roleAdv[r]=x.adv;roleObserved[r]=x.score;roleEvidenceWeight[r]=x.evidence;roleAdvSource[r]='role-proxy';}}return {modelVersion:MODEL_VERSION,roleAdv,roleObserved,roleEvidenceWeight,roleAdvSource,statAssessment};}
 export function teamPrediction(roster,roles,confirmed=true){const players=new Map(roster.map(p=>[p.id,p]));const teams=Object.fromEntries(['A','B'].map(side=>[side,ROLES.map(r=>{const p=players.get(roles[r]?.[side==='A'?'aId':'bId']);if(!p)throw new Error('선수 정보를 확인해 주세요.');const skill=confirmed?{mean:roleStrength(p,r),variance:roleUncertainty(p,r)**2}:{mean:-estimatedTier(p),variance:newSkill(p)?p.skillRating.general.variance:RATING_POLICY.generalVariance};return {id:p.id,role:r,...skill};})]));const means=Object.fromEntries(['A','B'].map(s=>[s,teams[s].reduce((n,p)=>n+p.mean,0)])),vars=Object.fromEntries(['A','B'].map(s=>[s,teams[s].reduce((n,p)=>n+p.variance,0)])),c=Math.sqrt(vars.A+vars.B+2*RATING_POLICY.teamNoiseVariance),gap=means.A-means.B;return {predictedAWin:sigmoid(gap/c),scale:c,strengthGap:gap,teams,teamMeans:means,teamVariances:vars,feature:ROLES.slice(0,3).map((r,i)=>teams.A[i].mean-teams.B[i].mean).concat((teams.A[3].mean+teams.A[4].mean)-(teams.B[3].mean+teams.B[4].mean))};}
 export function applyRatingUpdate(state,record){
- if(record.modelVersion===previousEvidence.MODEL_VERSION)return previousEvidence.applyRatingUpdate(state,record);
  if(record.modelVersion!==MODEL_VERSION)return legacy.applyRatingUpdate(state,record);
  const winnerKnown=['A','B'].includes(record.winner),confirmed=record.rolesConfirmed!==false,hasStats=confirmed&&ROLES.some(r=>(record.roleEvidenceWeight?.[r]||0)>0);
  if(!winnerKnown&&!hasStats){record.ratingApplied=false;record.loggedAt||=new Date().toISOString();state.history.push(record);return;}
  const players=new Map(state.roster.map(p=>[p.id,p]));for(const id of new Set(ROLES.flatMap(r=>[record.roles[r].aId,record.roles[r].bId])))ensureSkill(players.get(id));
- const before=Object.fromEntries(ROLES.map(r=>[r,Object.fromEntries(['a','b'].map(side=>{const p=players.get(record.roles[r][side+'Id']);return [side,{tier:roleTier(p,r),overall:estimatedTier(p),raw:-roleStrength(p,r)}];}))]));
  const prediction=teamPrediction(state.roster,record.roles,confirmed);record.predictedAWin=prediction.predictedAWin;record.feature=prediction.feature;record.predictionScale=prediction.scale;
- if(winnerKnown){const residual=(record.winner==='A'?1:0)-prediction.predictedAWin,curvature=prediction.predictedAWin*(1-prediction.predictedAWin);for(const side of ['A','B'])for(const entry of prediction.teams[side]){const p=players.get(entry.id),q=confirmed?p.skillRating.roles[entry.role]:p.skillRating.general,v=q.variance;q.delta+=outcomeStep(v,prediction.scale,(side==='A'?1:-1)*residual,q.games);q.variance=Math.max(.05,v*(1-RATING_POLICY.gamma*v/(prediction.scale**2)*curvature));q.games++;}}
+ if(winnerKnown){const residual=(record.winner==='A'?1:0)-prediction.predictedAWin,curvature=prediction.predictedAWin*(1-prediction.predictedAWin);for(const side of ['A','B'])for(const entry of prediction.teams[side]){const p=players.get(entry.id),q=confirmed?p.skillRating.roles[entry.role]:p.skillRating.general,v=q.variance;q.delta+=v/prediction.scale*(side==='A'?1:-1)*residual;q.variance=Math.max(.05,v*(1-RATING_POLICY.gamma*v/(prediction.scale**2)*curvature));q.games++;}}
  for(const r of ROLES){const a=players.get(record.roles[r].aId),b=players.get(record.roles[r].bId);for(const[p,side]of[[a,'A'],[b,'B']]){p.stats.games++;if(winnerKnown)p.stats[record.winner===side?'wins':'losses']++;}
   const evidence=record.roleEvidenceWeight?.[r]||0,observed=record.roleObserved?.[r];if(!confirmed||evidence<=0||observed==null)continue;
   for(const[p,sign]of[[a,1],[b,-1]]){const q=p.skillRating.roles[r];q.performanceSum+=sign*evidence*observed;q.performanceWeight+=evidence;const st=p.stats.role[r];st.games++;st[record.roleAdv[r]==='E'?'even':record.roleAdv[r]===(sign===1?'A':'B')?'better':'worse']++;}
  }
- record.calibrationPolicy={early:3,middle:2,established:1.5,earlyGames:5,middleGames:15,outcomeCap:RATING_POLICY.outcomeCap};
- record.tierChanges=Object.fromEntries(ROLES.map(r=>[r,Object.fromEntries(['a','b'].map(side=>{const p=players.get(record.roles[r][side+'Id']),b=before[r][side];return [side,{id:p.id,name:p.name,before:confirmed?b.tier:b.overall,after:confirmed?roleTier(p,r):estimatedTier(p),scope:confirmed?'role':'overall',rawBefore:confirmed?b.raw:null,rawAfter:confirmed?-roleStrength(p,r):null}];}))]));
  state.model.algorithm=RATING_VERSION;state.model.weights=[1,1,1,1];state.model.gamesLearned++;record.weightsBefore=record.ratingBefore?.model?.weights||[1,1,1,1];record.weightsAfter=[1,1,1,1];record.ratingVersion=RATING_VERSION;record.tierSensitivity=1;record.roleTierSensitivity=1;record.ratingApplied=true;record.roleAssessmentProvisional=!confirmed;record.loggedAt||=new Date().toISOString();
  for(const id of new Set(ROLES.flatMap(r=>[record.roles[r].aId,record.roles[r].bId]))){const p=players.get(id);p.timeline||=[];p.timeline.push({time:record.loggedAt,tier:Number(estimatedTier(p).toFixed(4)),source:record.source||'live',gameId:record.id,ratingVersion:RATING_VERSION});}
  state.history.push(record);
