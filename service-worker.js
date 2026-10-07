@@ -1,5 +1,5 @@
-const CACHE = 'naejun-matchmaker-v7-role-fixed-20261007';
-const ASSETS = ['./legacy-role-model.js','./match-math.js','./','./index.html','./styles.css?v=7-role-fixed-20261007','./app.js?v=7-role-fixed-20261007','./role-model.js?v=7-role-fixed-20261007','./role-model.js','./room-rules.js','./record-edits.js?v=7-role-fixed-20261007','./shared-store.js?v=7-role-fixed-20261007','./cloud-config.js?v=7-role-fixed-20261007','./entry-input.js?v=7-role-fixed-20261007','./matcher-worker.js?v=7-role-fixed-20261007','./manifest.webmanifest?v=7-role-fixed-20261007','./icon-entry-180.png','./icon-entry-192.png','./icon-entry-512.png'];
+const CACHE = 'naejun-matchmaker-v8-role-readings-20261007';
+const ASSETS = ['./legacy-role-model.js','./match-math.js','./','./index.html','./styles.css?v=8-role-readings-20261007','./app.js?v=8-role-readings-20261007','./role-model.js?v=8-role-readings-20261007','./role-model.js','./room-rules.js','./record-edits.js?v=8-role-readings-20261007','./shared-store.js?v=8-role-readings-20261007','./cloud-config.js?v=8-role-readings-20261007','./entry-input.js?v=8-role-readings-20261007','./matcher-worker.js?v=8-role-readings-20261007','./manifest.webmanifest?v=8-role-readings-20261007','./icon-entry-180.png','./icon-entry-192.png','./icon-entry-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS.map(path=>new Request(new URL(path,self.location.href),{cache:'reload'})))).then(()=>self.skipWaiting()));
 });

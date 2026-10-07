@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="내전 매칭기">
-  <link rel="manifest" href="manifest.webmanifest?v=7-role-fixed-20261007">
+  <link rel="manifest" href="manifest.webmanifest?v=8-role-readings-20261007">
   <link rel="apple-touch-icon" sizes="180x180" href="icon-entry-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-entry-192.png">
-  <link rel="stylesheet" href="styles.css?v=7-role-fixed-20261007">
+  <link rel="stylesheet" href="styles.css?v=8-role-readings-20261007">
   <title>내전 자동 매칭기</title>
 </head>
 <body>
@@ -120,8 +120,8 @@
       <section id="tab-history" class="tab-panel">
         <div class="section-head">
           <div>
-            <p class="eyebrow">LEARNING</p>
-            <h2>학습 · 기록</h2>
+            <p class="eyebrow">MATCH HISTORY</p>
+            <h2>경기 기록</h2>
             <p>예전 내전도 직접 입력해 현재 추정 티어에 반영할 수 있습니다.</p>
           </div>
           <div class="head-actions"><button id="addPastBtn" class="primary-small">+ 지난 전적</button><span id="gamesBadge" class="badge"></span></div>
@@ -215,7 +215,7 @@
       <div class="result-subhead"><strong>10명 경기 수치</strong><small>K/D/A·피해량·CS 중심 · 필요한 역할만 골드·레벨 추가</small></div>
       <div id="resultStatEntry" class="stat-entry"></div>
       <p id="resultSaveError" class="entry-save-error" role="alert" hidden></p>
-      <button id="saveResultBtn" type="submit" class="primary-btn large compact-submit">경기 기록 저장 · 학습</button>
+      <button id="saveResultBtn" type="submit" class="primary-btn large compact-submit">경기 기록 저장</button>
       <p class="tiny-note">확인 가능한 값만 입력하면 됩니다. 직접 입력한 원본 수치를 기록하고 수치상 비교 결과와 보정 제외 설정을 함께 저장합니다. 기준 티어는 자동으로 덮어쓰지 않습니다.</p>
     </form>
   </dialog>
@@ -246,7 +246,7 @@
       <p id="pastSaveError" class="entry-save-error" role="alert" hidden></p>
       <div class="modal-actions">
         <button type="button" value="cancel" formnovalidate class="secondary-btn">취소</button>
-        <button id="savePastBtn" type="submit" class="primary-btn">지난 전적 저장 · 학습</button>
+        <button id="savePastBtn" type="submit" class="primary-btn">지난 전적 저장</button>
       </div>
     </form>
   </dialog>
@@ -289,6 +289,6 @@
     <form id="adminLoginForm"><label class="field">계정<input id="adminUsername" autocomplete="username" required></label><label class="field">비밀번호<input id="adminPassword" type="password" autocomplete="current-password" required></label><button class="primary-btn">로그인</button></form>
     <section id="adminOptions" hidden><form id="pinForm"><label class="field">새 입장 비밀번호<input id="newPin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" required></label><button class="secondary-btn">4자리 비밀번호 변경</button><p class="field-help">변경하면 참가자는 새 비밀번호로 다시 입장합니다.</p></form><form id="passwordForm"><label class="field">새 관리자 아이디 (선택)<input id="newAdminUsername" autocomplete="username" minlength="3" maxlength="40" pattern="[A-Za-z0-9_.-]{3,40}"></label><p class="field-help">비워두면 현재 아이디를 유지합니다.</p><label class="field">현재 관리자 비밀번호<input id="currentAdminPassword" type="password" autocomplete="current-password" required></label><label class="field">새 관리자 비밀번호<input id="newAdminPassword" type="password" minlength="11" autocomplete="new-password" required></label><button class="secondary-btn">관리자 로그인 정보 변경</button></form><button id="toggleEntryBtn" class="secondary-btn">참가자 입장 중단</button><button id="cancelSharedDraftBtn" type="button" class="secondary-btn">입력 중인 공유 경기 닫기</button><button id="legacyImportBtn" class="secondary-btn">이 기기의 기존 자료 가져오기</button><p class="field-help">원본을 백업한 뒤 서버에 가져옵니다. 다른 서버 기록이 있으면 덮어쓰지 않고 가져오기를 중단합니다.</p><button id="logoutBtn" class="text-btn">로그아웃</button></section><p id="adminError" class="form-error" role="alert"></p>
   </dialog>
-  <script type="module" src="app.js?v=7-role-fixed-20261007"></script>
+  <script type="module" src="app.js?v=8-role-readings-20261007"></script>
 </body>
 </html>

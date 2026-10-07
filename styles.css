@@ -190,3 +190,5 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sa
 .fixed-role-labels,.fixed-role-row{display:grid;grid-template-columns:50px minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center;margin:10px 0}.fixed-role-labels{font-size:12px;color:var(--muted)}.fixed-role-row select{width:100%;min-width:0;min-height:44px;font-size:16px}.fixed-roles-section .entry-error{margin-top:12px}.fixed-roles-section .section-head{flex-wrap:wrap}#matchConstraintError[hidden]{display:none}
 
 .fixed-slot-badge{display:inline-block;font-size:11px;margin-left:6px;padding:2px 5px;border:1px solid currentColor;border-radius:3px}
+
+.plan-reading{padding:16px 20px;background:var(--panel-2);border-top:1px solid var(--line-soft)}.plan-reading strong{font-size:16px}.plan-reading p{font-size:13px;line-height:1.7;margin-top:8px}.plan-numbers{margin:12px 20px}.plan-numbers summary{cursor:pointer;font-size:14px;font-weight:700}.plan-numbers>p{font-size:12px;line-height:1.7;margin:12px 0}.qualitative-value{font-size:15px!important;line-height:1.6}.role-tag{overflow-wrap:anywhere}.plan-overview td{white-space:normal;min-width:90px}
