@@ -6,9 +6,8 @@ export function evaluateMatch(assignA,assignB,players,model,teamMaskA){
  const laneMean=gaps.reduce((s,g)=>s+g*g,0)/5,excess=gaps.reduce((s,g)=>s+Math.max(0,g-1)**2,0)/5;
  const uncertaintyCost=ROLES.reduce((s,r,i)=>{const a=roleUncertainty(players[assignA[i]],r),b=roleUncertainty(players[assignB[i]],r);return s+(a*a+b*b)/10+(a-b)**2/5;},0);
  const unratedAssignments=ROLES.reduce((n,r,i)=>n+Number(roleEvidence(players[assignA[i]],r).games===0)+Number(roleEvidence(players[assignB[i]],r).games===0),0);
- const assignmentNovelty=4*unratedAssignments/10;
- const score=totalGap**2/5+laneMean+excess+.10*(uncertaintyCost+assignmentNovelty),botA=(rawA[3]+rawA[4])/2,botB=(rawB[3]+rawB[4])/2;
- return {assignA,assignB,teamMaskA,score,predictedAWin:prediction.predictedAWin,feature:prediction.feature,predictionScale:prediction.scale,tierSumA:sumA,tierSumB:sumB,totalGap,topGap:gaps[0],jgGap:gaps[1],midGap:gaps[2],adcGap:gaps[3],supGap:gaps[4],botIndexA:botA,botIndexB:botB,botGap:Math.abs(botA-botB),uncertaintyCost,assignmentNovelty,unratedAssignments,laneMean,excess};
+ const score=totalGap**2/5+laneMean+excess+.10*uncertaintyCost,botA=(rawA[3]+rawA[4])/2,botB=(rawB[3]+rawB[4])/2;
+ return {assignA,assignB,teamMaskA,score,predictedAWin:prediction.predictedAWin,feature:prediction.feature,predictionScale:prediction.scale,tierSumA:sumA,tierSumB:sumB,totalGap,topGap:gaps[0],jgGap:gaps[1],midGap:gaps[2],adcGap:gaps[3],supGap:gaps[4],botIndexA:botA,botIndexB:botB,botGap:Math.abs(botA-botB),uncertaintyCost,unratedAssignments,maxLaneGap:Math.max(...gaps),laneMean,excess};
 }
 
 export function prepareFixedRoles(players,fixedRoles={}){
@@ -24,3 +23,9 @@ export function prepareFixedRoles(players,fixedRoles={}){
  }
  return {locks,hasLocks:seen.size>0,count:seen.size};
 }
+
+// Epsilon constraints protect the balance baseline before maximizing placement coverage.
+export const PLACEMENT_POLICY=Object.freeze({scoreSlack:.15,scoreRelativeSlack:.10,totalGapSlack:.5,laneGapSlack:.25,laneFloor:1,probabilitySlack:.03});
+export function placementLimits(b){return {score:b.score+Math.max(PLACEMENT_POLICY.scoreSlack,PLACEMENT_POLICY.scoreRelativeSlack*b.score),totalGap:b.totalGap+PLACEMENT_POLICY.totalGapSlack,maxLaneGap:Math.max(PLACEMENT_POLICY.laneFloor,b.maxLaneGap)+PLACEMENT_POLICY.laneGapSlack,winSkew:Math.abs(b.predictedAWin-.5)+PLACEMENT_POLICY.probabilitySlack};}
+export function withinPlacementBalance(c,limits){const eps=1e-9;return c.score<=limits.score+eps&&c.totalGap<=limits.totalGap+eps&&c.maxLaneGap<=limits.maxLaneGap+eps&&Math.abs(c.predictedAWin-.5)<=limits.winSkew+eps;}
+export function comparePlacement(a,b){return b.unratedAssignments-a.unratedAssignments||a.score-b.score;}
