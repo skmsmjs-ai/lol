@@ -67,9 +67,15 @@ export function editRecord(current,request,actor='member'){
   const original=current.history[index];
   if(!same(original,request.expectedRecord))input=rebaseRecordEdit(request.expectedRecord,input,original);
   if(!input||input.id!==original.id||(input.time!==null&&!Number.isFinite(Date.parse(input.time))))throw new HttpError(422,'경기 시각과 기록을 확인해 주세요.');
-  // Corrections keep each original team and player ID. Position selectors swap
-  // teammates, so the player's complete stats travel with the player.
-  for(const side of ['aId','bId']){
+  // Ordinary role edits keep each original team. An explicit administrator
+  // correction may fix teams, but must keep exactly the same ten player IDs.
+  const correctTeams=request.correctTeams===true;
+  if(correctTeams&&actor!=='admin')throw new HttpError(403,'팀 정정은 관리자만 할 수 있습니다.');
+  if(correctTeams){
+    const before=ROLES.flatMap(r=>[original.roles[r].aId,original.roles[r].bId]).sort();
+    const after=ROLES.flatMap(r=>[input.roles?.[r]?.aId,input.roles?.[r]?.bId]).sort();
+    if(!same(before,after)||new Set(after).size!==10)throw new HttpError(422,'기존 선수 10명을 한 번씩 배정해 주세요.');
+  }else for(const side of ['aId','bId']){
     const before=ROLES.map(r=>original.roles[r][side]).sort(),after=ROLES.map(r=>input.roles?.[r]?.[side]).sort();
     if(!same(before,after)||new Set(after).size!==5)throw new HttpError(422,'각 팀의 기존 선수 5명을 한 번씩 배정해 주세요.');
   }
@@ -91,6 +97,6 @@ export function editRecord(current,request,actor='member'){
     rebuilt=acceptChanges(rebuilt,proposed,actor);
     const computed=rebuilt.history.at(-1);rebuilt.history[rebuilt.history.length-1]={...raw,...computed};
   }
-  revisions.push({id:request.editId,recordId:original.id,time:new Date().toISOString(),actor,input:clone(request.input),appliedInput:clone(input),before});
+  revisions.push({id:request.editId,recordId:original.id,time:new Date().toISOString(),actor,...(correctTeams?{correctTeams:true}:{}),input:clone(request.input),appliedInput:clone(input),before});
   rebuilt.recordEdits=revisions;if(Object.hasOwn(current,'activeDraft'))rebuilt.activeDraft=clone(current.activeDraft);return rebuilt;
 }
