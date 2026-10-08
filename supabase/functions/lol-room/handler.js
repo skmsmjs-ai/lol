@@ -77,6 +77,7 @@ export function createHandler({rpc,allowedOrigins}) {
       }
       throw new HttpError(404,'요청한 기능을 찾지 못했습니다. 앱을 새로 열어 주세요.');
     }catch(error){
+      if(!error.status)console.error('lol-room request failed',{name:error.name,message:error.message});
       return json(error.status||500,{error:error.status?error.message:'서버가 요청을 처리하지 못했습니다. 입력을 확인하고 다시 시도해 주세요.',...(error.data||{})});
     }
   };
