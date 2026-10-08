@@ -8,7 +8,7 @@ function satisfiesGroups(mask,groupMasks){for(const gm of groupMasks){const inA=
 function changedPerTeam(a,b){return popcount(a.teamMaskA^b.teamMaskA)/2;}
 function choosePlans(all){all.sort(comparePlacement);const plans=[];if(all.length)plans.push(all[0]);const enough=(c,min)=>plans.every(p=>changedPerTeam(c,p)>=min);for(const c of all){if(plans.length>=3)break;if(plans.some(p=>p.teamMaskA===c.teamMaskA))continue;if(enough(c,2))plans.push(c);}for(const c of all){if(plans.length>=3)break;if(plans.some(p=>p.teamMaskA===c.teamMaskA))continue;if(enough(c,1))plans.push(c);}return plans;}
 self.onmessage=e=>{
-  const{players,model,fixedGroups,fixedRoles}=e.data;if(!players||players.length!==10){self.postMessage({error:"참가자는 정확히 10명이어야 합니다."});return;}
+  const{players,model,fixedGroups,fixedRoles}=e.data;if(!players||players.length!==10){self.postMessage({error:"참가자 10명을 선택해 주세요."});return;}
   let constraints;try{constraints=prepareFixedRoles(players,fixedRoles);}catch(error){self.postMessage({error:error.message});return;}
   const indexById=new Map(players.map((p,i)=>[p.id,i]));const groupMasks=(fixedGroups||[]).map(g=>g.reduce((m,id)=>{const idx=indexById.get(id);return idx===undefined?m:(m|(1<<idx));},0)).filter(Boolean);
   const assignmentCache=new Map();let checked=0;
@@ -21,10 +21,10 @@ self.onmessage=e=>{
     checked++;if(checked%20===0)self.postMessage({progress:checked});
   }}
   let baseline=null;enumerate(c=>{if(!baseline||c.score<baseline.score)baseline=c;});
-  if(!baseline){self.postMessage({error:'라인 고정·같은 팀 그룹·가능·거부 역할 조건을 동시에 만족하는 배치가 없습니다. 조건을 수정해 주세요. 조건은 자동으로 풀지 않았습니다.'});return;}
+  if(!baseline){self.postMessage({error:'이 조건으로는 팀을 나눌 수 없습니다. 라인 고정, 같은 팀 묶음, 거부라인을 확인해 주세요. 지정한 조건은 유지했습니다.'});return;}
   const limits=placementLimits(baseline),bestByTeam=new Map();
   enumerate(c=>{if(!withinPlacementBalance(c,limits))return;const old=bestByTeam.get(c.teamMaskA);if(!old||comparePlacement(c,old)<0)bestByTeam.set(c.teamMaskA,c);});
   const candidates=[...bestByTeam.values()].map(c=>({...c,placement:{unratedAssignments:c.unratedAssignments,baselineScore:baseline.score,baselineUnrated:baseline.unratedAssignments,scoreIncrease:c.score-baseline.score,limits}}));
-  if(!candidates.length){self.postMessage({error:'라인 고정·같은 팀 그룹·가능·거부 역할 조건을 동시에 만족하는 배치가 없습니다. 조건을 수정해 주세요. 조건은 자동으로 풀지 않았습니다.'});return;}
+  if(!candidates.length){self.postMessage({error:'이 조건으로는 팀을 나눌 수 없습니다. 라인 고정, 같은 팀 묶음, 거부라인을 확인해 주세요. 지정한 조건은 유지했습니다.'});return;}
   self.postMessage({plans:choosePlans(candidates),candidateCount:candidates.length,fixedCount:constraints.count});
 };

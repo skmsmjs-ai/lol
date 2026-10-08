@@ -8,11 +8,11 @@ export const RATING_VERSION='role-calibration-2026-10-07-v8';
 export const TIER_SENSITIVITY=1,ROLE_TIER_SENSITIVITY=1;
 export const RATING_POLICY={roleVariance:4,generalVariance:1,teamNoiseVariance:3.2,performanceCap:.75,performancePrior:1,gamma:.5,outcomeCap:.9};
 export const ROLE_RULES={
- TOP:{growth:.65,participation:.10,efficiency:.10,damage:.15,economy:{gold:.50,cs:.25,level:.25},evidence:.55,required:['gold','level'],definition:'골드·레벨로 성장 유지, 피해량·교전 관여로 확인 가능한 압박을 비교합니다.'},
- JG:{growth:.30,participation:.45,efficiency:.15,damage:.10,economy:{gold:.55,cs:.20,level:.25},evidence:.40,required:['gold','level'],definition:'팀 교전 관여와 골드·레벨 성장을 비교합니다. 오브젝트·갱킹의 질은 이 수치만으로 확정하지 않습니다.'},
- MID:{growth:.35,participation:.25,efficiency:.10,damage:.30,economy:{gold:.65,cs:.25,level:.10},evidence:.55,required:['gold'],definition:'챔피언 피해량·교전 관여와 골드 성장을 비교합니다. 로밍의 질은 별도로 알 수 없습니다.'},
- ADC:{growth:.40,participation:.10,efficiency:.10,damage:.40,economy:{gold:.65,cs:.30,level:.05},evidence:.55,required:['gold'],definition:'챔피언 피해량과 골드·CS 성장을 중심으로 봅니다. 챔피언·게임 흐름 차이까지 설명하는 지표는 아닙니다.'},
- SUP:{growth:0,participation:.70,efficiency:.30,damage:0,economy:{gold:0,cs:0,level:0},evidence:.35,required:[],definition:'어시스트 관여와 데스 대비 어시스트 효율을 비교합니다. 골드·CS·피해량·킬 수 자체로 서포터를 평가하지 않습니다.'}
+ TOP:{growth:.65,participation:.10,efficiency:.10,damage:.15,economy:{gold:.50,cs:.25,level:.25},evidence:.55,required:['gold','level'],definition:'골드·레벨의 성장과 피해량·교전 관여를 비교합니다. 운영과 포탑 압박은 이 수치만으로 알 수 없습니다.'},
+ JG:{growth:.30,participation:.45,efficiency:.15,damage:.10,economy:{gold:.55,cs:.20,level:.25},evidence:.40,required:['gold','level'],definition:'교전 관여와 골드·레벨의 성장을 비교합니다. 오브젝트 확보와 갱킹의 질은 따로 확인해야 합니다.'},
+ MID:{growth:.35,participation:.25,efficiency:.10,damage:.30,economy:{gold:.65,cs:.25,level:.10},evidence:.55,required:['gold'],definition:'챔피언 피해량·교전 관여·골드의 성장을 비교합니다. 로밍의 질은 이 수치만으로 알 수 없습니다.'},
+ ADC:{growth:.40,participation:.10,efficiency:.10,damage:.40,economy:{gold:.65,cs:.30,level:.05},evidence:.55,required:['gold'],definition:'챔피언 피해량과 골드·CS의 성장을 비교합니다. 챔피언과 경기 흐름에 따른 차이는 남을 수 있습니다.'},
+ SUP:{growth:0,participation:.70,efficiency:.30,damage:0,economy:{gold:0,cs:0,level:0},evidence:.35,required:[],definition:'팀 킬 대비 어시스트와 데스 대비 어시스트 효율을 비교합니다. 골드·CS·레벨·피해량·킬 수 자체는 보정에 사용하지 않습니다.'}
 };
 export function calibrationMultiplier(games){return games<5?3:games<15?2:1.5;}
 export function outcomeStep(variance,scale,residual,games){return RATING_POLICY.outcomeCap*Math.tanh(calibrationMultiplier(games)*variance/scale*residual/RATING_POLICY.outcomeCap);}

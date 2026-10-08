@@ -46,10 +46,10 @@ export async function createApp(options={}){
   function session(req){const raw=req.headers.cookie?.match(/(?:^|;\s*)naejun_session=([^;]+)/)?.[1];if(!raw)return null;const s=db.prepare('SELECT * FROM sessions WHERE token=?').get(hashToken(raw));if(!s||s.expires<Date.now()||s.epoch!==Number(get(`${s.role==='admin'?'admin':'member'}_epoch`)))return null;return s;}
   function requireSession(req,admin=false){const s=session(req);if(!s)throw new HttpError(401,'입장이 만료되었습니다. 다시 입장해 주세요.');if(admin&&s.role!=='admin')throw new HttpError(403,'관리자 계정으로 로그인해 주세요.');return s;}
   function issue(res,role){db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());const token=randomBytes(32).toString('base64url');db.prepare('INSERT INTO sessions VALUES(?,?,?,?)').run(hashToken(token),role,Number(get(`${role==='admin'?'admin':'member'}_epoch`)),Date.now()+7*24*3600*1000);cookie(res,token);}
-  async function body(req){let chunks=[],size=0;for await(const chunk of req){size+=chunk.length;if(size>20*1024*1024)throw new HttpError(413,'자료가 20MB를 넘습니다. 원본을 백업하고 서버 저장 한도를 조정해 주세요.');chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{throw new HttpError(400,'입력 자료를 읽지 못했습니다.');}}
+  async function body(req){let chunks=[],size=0;for await(const chunk of req){size+=chunk.length;if(size>20*1024*1024)throw new HttpError(413,'자료가 20MB를 넘습니다. 먼저 백업을 내보낸 뒤 관리자에게 저장 한도를 확인해 주세요.');chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{throw new HttpError(400,'입력 자료를 읽지 못했습니다. 앱에서 다시 시도해 주세요.');}}
   function throttle(req,name){const key=`${name}:${req.socket.remoteAddress}`;const row=db.prepare('SELECT * FROM failures WHERE key=?').get(key);if(row&&row.until>Date.now()&&row.count>=5)throw new HttpError(429,'입장 시도가 반복되었습니다. 1분 뒤 다시 시도해 주세요.');failure(key);return key;}
   function failure(key){const old=db.prepare('SELECT * FROM failures WHERE key=?').get(key);db.prepare('INSERT INTO failures VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET count=excluded.count,until=excluded.until').run(key,old&&old.until>Date.now()?old.count+1:1,Date.now()+60000);}
-  function commit(state,revision,role,reason){db.exec('BEGIN IMMEDIATE');try{const current=readState();if(current.revision!==revision)throw new HttpError(409,'다른 사람이 자료를 수정했습니다.',current);const next=revision+1;if(reason==='import'||reason==='reset')db.prepare('INSERT INTO archives(time,reason,body) VALUES(?,?,?)').run(new Date().toISOString(),reason,JSON.stringify(current.state));db.prepare('UPDATE document SET body=?,revision=? WHERE id=1').run(JSON.stringify(state),next);db.prepare('INSERT INTO audit(time,role,action,revision) VALUES(?,?,?,?)').run(new Date().toISOString(),role,reason,next);db.exec('COMMIT');return {state,revision:next};}catch(error){db.exec('ROLLBACK');throw error;}}
+  function commit(state,revision,role,reason){db.exec('BEGIN IMMEDIATE');try{const current=readState();if(current.revision!==revision)throw new HttpError(409,'다른 기기에서 기록이 바뀌었습니다. 최신 기록을 확인해 주세요.',current);const next=revision+1;if(reason==='import'||reason==='reset')db.prepare('INSERT INTO archives(time,reason,body) VALUES(?,?,?)').run(new Date().toISOString(),reason,JSON.stringify(current.state));db.prepare('UPDATE document SET body=?,revision=? WHERE id=1').run(JSON.stringify(state),next);db.prepare('INSERT INTO audit(time,role,action,revision) VALUES(?,?,?,?)').run(new Date().toISOString(),role,reason,next);db.exec('COMMIT');return {state,revision:next};}catch(error){db.exec('ROLLBACK');throw error;}}
   const staticFiles=new Map(['legacy-role-model.js','evidence-role-model-v7.js','match-math.js','index.html','app.js','role-model.js','room-rules.js','record-edits.js','shared-store.js','entry-input.js','cloud-config.js','styles.css','matcher-worker.js','manifest.webmanifest','service-worker.js','icon-192.png','icon-512.png','icon-entry-180.png','icon-entry-192.png','icon-entry-512.png','icon-source.svg'].map(x=>['/'+x,join(root,x)]));
   const types={html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',png:'image/png'};
   const server=createServer(async(req,res)=>{
@@ -62,7 +62,7 @@ export async function createApp(options={}){
         res.setHeader('Cache-Control','no-store');
         if(!['GET','HEAD'].includes(req.method)){
           const origin=req.headers.origin,expected=publicOrigin||`http://${req.headers.host}`;
-          if(req.headers['x-requested-with']!=='Naejun'||(origin&&origin!==expected)||!req.headers['content-type']?.startsWith('application/json'))throw new HttpError(403,'같은 내전 화면에서 요청해 주세요.');
+          if(req.headers['x-requested-with']!=='Naejun'||(origin&&origin!==expected)||!req.headers['content-type']?.startsWith('application/json'))throw new HttpError(403,'내전 앱에서 다시 시도해 주세요.');
         }
         if(path==='/api/session'&&req.method==='GET'){const s=session(req);return json(200,{authenticated:!!s,role:s?.role||null,entryEnabled:get('entry_enabled')==='1'});}
         if(path==='/api/enter'&&req.method==='POST'){
@@ -76,14 +76,14 @@ export async function createApp(options={}){
         if(path==='/api/logout'&&req.method==='POST'){const s=requireSession(req);db.prepare('DELETE FROM sessions WHERE token=?').run(s.token);cookie(res,'',0);return json(200,{ok:true});}
         if(path==='/api/state'&&req.method==='GET'){requireSession(req);return json(200,readState());}
         if(path==='/api/state'&&req.method==='PUT'){
-          const s=requireSession(req),b=await body(req),old=readState();if(b.revision!==old.revision)throw new HttpError(409,'다른 사람이 자료를 수정했습니다.',old);
+          const s=requireSession(req),b=await body(req),old=readState();if(b.revision!==old.revision)throw new HttpError(409,'다른 기기에서 기록이 바뀌었습니다. 최신 기록을 확인해 주세요.',old);
           const next=acceptChanges(old.state,copy(b.state),s.role);return json(200,commit(next,b.revision,s.role,'save'));
         }
         if(path==='/api/records/edit'&&req.method==='POST'){
           const s=requireSession(req),b=await body(req),old=readState();
           const existing=old.state.recordEdits?.find(e=>e.id===b.editId);
-          if(existing){if(existing.recordId!==b.recordId||!sameEditInput(existing.input,b.input))throw new HttpError(409,'같은 수정 요청의 입력이 달라졌습니다. 기록을 다시 열어 주세요.');return json(200,old);}
-          if(b.revision!==old.revision)throw new HttpError(409,'다른 사람이 자료를 수정했습니다. 수정 초안은 보존했습니다.',old);
+          if(existing){if(existing.recordId!==b.recordId||!sameEditInput(existing.input,b.input))throw new HttpError(409,'이전 수정 요청과 입력이 다릅니다. 기록을 다시 열어 수정해 주세요.');return json(200,old);}
+          if(b.revision!==old.revision)throw new HttpError(409,'다른 기기에서 기록이 바뀌었습니다. 최신 기록을 확인한 뒤 다시 저장해 주세요.',old);
           return json(200,commit(editRecord(old.state,b,s.role),b.revision,s.role,'edit-record'));
         }
         if(path.startsWith('/api/admin/')){
@@ -92,15 +92,15 @@ export async function createApp(options={}){
           if(path==='/api/admin/password'&&req.method==='POST'){if(!await verify(b.current||'',get('admin_hash')))throw new HttpError(403,'현재 관리자 비밀번호를 확인해 주세요.');if(typeof b.password!=='string'||b.password.length<11||b.password.length>256)throw new HttpError(422,'관리자 비밀번호는 11자 이상 256자 이하입니다.');if(b.username!==undefined&&(typeof b.username!=='string'||!/^[A-Za-z0-9_.-]{3,40}$/.test(b.username)))throw new HttpError(422,'관리자 아이디는 영문, 숫자, 점, 밑줄, 하이픈으로 3~40자 입력해 주세요.');const hash=await passwordHash(b.password);db.exec('BEGIN IMMEDIATE');try{if(b.username!==undefined)set('admin_username',b.username);set('admin_hash',hash);set('admin_epoch',Number(get('admin_epoch'))+1);db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}issue(res,'admin');return json(200,{ok:true});}
           if(path==='/api/admin/entry'&&req.method==='POST'){if(typeof b.enabled!=='boolean')throw new HttpError(422,'입장 설정을 확인해 주세요.');set('entry_enabled',b.enabled?1:0);if(!b.enabled)set('member_epoch',Number(get('member_epoch'))+1);return json(200,{enabled:b.enabled});}
           if(path==='/api/admin/import'&&req.method==='POST'){const old=readState(),incoming=validateDocument(copy(b.state));if(old.state.history.length&&!same(old.state.history,incoming.history))throw new HttpError(409,'서버에 이미 다른 경기 기록이 있습니다. 기존 자료를 덮어쓰지 않았습니다.',old);delete incoming.session;incoming.version=6;return json(200,commit(incoming,b.revision,s.role,'import'));}
-          if(path==='/api/admin/draft/cancel'&&req.method==='POST'){const old=readState();if(b.revision!==old.revision)throw new HttpError(409,'다른 사람이 자료를 수정했습니다.',old);if(old.state.activeDraft)db.prepare('INSERT INTO archives(time,reason,body) VALUES(?,?,?)').run(new Date().toISOString(),'cancel-draft',JSON.stringify(old.state.activeDraft));old.state.activeDraft=null;return json(200,commit(old.state,b.revision,s.role,'cancel-draft'));}
+          if(path==='/api/admin/draft/cancel'&&req.method==='POST'){const old=readState();if(b.revision!==old.revision)throw new HttpError(409,'다른 기기에서 기록이 바뀌었습니다. 최신 기록을 확인해 주세요.',old);if(old.state.activeDraft)db.prepare('INSERT INTO archives(time,reason,body) VALUES(?,?,?)').run(new Date().toISOString(),'cancel-draft',JSON.stringify(old.state.activeDraft));old.state.activeDraft=null;return json(200,commit(old.state,b.revision,s.role,'cancel-draft'));}
           if(path==='/api/admin/reset'&&req.method==='POST'){const initial=JSON.parse(readFileSync(join(root,'initial-state.json'),'utf8'));delete initial.session;return json(200,commit(initial,b.revision,s.role,'reset'));}
         }
-        throw new HttpError(404,'요청한 기능을 찾지 못했습니다.');
+        throw new HttpError(404,'요청한 기능을 찾지 못했습니다. 앱을 새로 열어 주세요.');
       }
       if(req.method!=='GET'&&req.method!=='HEAD')throw new HttpError(405,'허용되지 않는 요청입니다.');
       const file=staticFiles.get(path==='/'?'/index.html':path);if(!file)throw new HttpError(404,'파일을 찾지 못했습니다.');
       res.writeHead(200,{'Content-Type':types[file.split('.').at(-1)]||'application/octet-stream','Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:readFileSync(file));
-    }catch(error){if(!(error instanceof HttpError))console.error('Request failed:',error.name);json(error.status||500,{error:error.status?error.message:'서버에서 저장하지 못했습니다. 입력을 보존하고 다시 시도해 주세요.',...error.data});}
+    }catch(error){if(!(error instanceof HttpError))console.error('Request failed:',error.name);json(error.status||500,{error:error.status?error.message:'서버가 요청을 처리하지 못했습니다. 입력을 확인하고 다시 시도해 주세요.',...error.data});}
   });
   return {server,db,close:()=>new Promise(resolve=>server.close(()=>{db.close();resolve();}))};
 }

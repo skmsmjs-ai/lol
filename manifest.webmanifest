@@ -2,7 +2,7 @@
   "id": "./",
   "name": "내전 자동 매칭기",
   "short_name": "내전 매칭기",
-  "description": "레벨·K/D/A·CS·게임 시간·골드로 기록하고 같은 포지션을 비교하는 우리 내전 공간",
+  "description": "역할별 전적을 참고해 팀을 나누고 경기 결과를 기록하는 내전 앱",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

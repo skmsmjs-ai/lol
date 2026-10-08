@@ -16,13 +16,13 @@ export function editableRecord(h){
 export function rebaseRecordEdit(base,input,current,resolutions={}){
   if(!base||base.id!==current.id||input?.id!==current.id)throw new HttpError(422,'수정할 경기 정보를 확인해 주세요.');
   const b=editableRecord(base),l=editableRecord(input),r=editableRecord(current),conflicts=[];
-  if(!same(Object.keys(b.statsByPlayer).sort(),Object.keys(l.statsByPlayer).sort())||!same(Object.keys(b.statsByPlayer).sort(),Object.keys(r.statsByPlayer).sort()))throw new HttpError(422,'각 팀의 기존 선수 5명을 중복 없이 배치해 주세요.');
+  if(!same(Object.keys(b.statsByPlayer).sort(),Object.keys(l.statsByPlayer).sort())||!same(Object.keys(b.statsByPlayer).sort(),Object.keys(r.statsByPlayer).sort()))throw new HttpError(422,'각 팀의 기존 선수 5명을 한 번씩 배정해 주세요.');
   function merge(b,l,r,path){if(same(l,b))return clone(r);if(same(r,b)||same(l,r))return clone(l);if(b&&l&&r&&typeof b==='object'&&typeof l==='object'&&typeof r==='object'){return Object.fromEntries(Object.keys(b).map(k=>[k,merge(b[k],l[k],r[k],path?path+'.'+k:k)]));}if(resolutions[path]==='local')return clone(l);if(resolutions[path]==='remote')return clone(r);conflicts.push({field:path,base:b,local:l,remote:r});return clone(l);}
   const m=merge(b,l,r,'');
-  if(conflicts.length)throw new HttpError(409,'같은 항목을 서로 다르게 수정했습니다. 아래 값을 비교해 선택해 주세요. 수정 초안은 보존했습니다.',{latestRecord:clone(current),conflicts});
+  if(conflicts.length)throw new HttpError(409,'같은 항목에 서로 다른 수정이 있습니다. 아래 값을 비교해 사용할 값을 선택해 주세요. 수정 초안은 남아 있습니다.',{latestRecord:clone(current),conflicts});
   const {statsByPlayer,...out}=m;out.stats=Object.fromEntries(ROLES.map(role=>[role,Object.fromEntries(['A','B'].map(side=>[side,statsByPlayer[m.roles[role][side==='A'?'aId':'bId']]]))]));return out;
 }
-const safeFailure=()=>new HttpError(422,'이 경기의 이전 계산 자료를 안전하게 복구하지 못했습니다. 원본을 보존했으며 관리자에게 확인해 주세요.');
+const safeFailure=()=>new HttpError(422,'이 경기의 이전 계산을 확인하지 못해 수정을 중단했습니다. 원본은 유지했습니다. 관리자에게 확인해 주세요.');
 function decrement(obj,key){if(!Number.isSafeInteger(obj[key])||obj[key]<1)throw safeFailure();obj[key]--;}
 // Older records have no checkpoint. Reverse only their documented five-input
 // updates, then verify by replaying the original updates before any edit.
@@ -71,7 +71,7 @@ export function editRecord(current,request,actor='member'){
   // teammates, so the player's complete stats travel with the player.
   for(const side of ['aId','bId']){
     const before=ROLES.map(r=>original.roles[r][side]).sort(),after=ROLES.map(r=>input.roles?.[r]?.[side]).sort();
-    if(!same(before,after)||new Set(after).size!==5)throw new HttpError(422,'각 팀의 기존 선수 5명을 중복 없이 배치해 주세요.');
+    if(!same(before,after)||new Set(after).size!==5)throw new HttpError(422,'각 팀의 기존 선수 5명을 한 번씩 배정해 주세요.');
   }
   const suffix=clone(current.history.slice(index)),next=clone(current);
   for(const h of [...suffix].reverse())undo(next,h);

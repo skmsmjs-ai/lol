@@ -1,4 +1,4 @@
-import {ROLES,roleStrength,roleTier,roleUncertainty,roleEvidence,teamPrediction} from './role-model.js';
+import {ROLES,ROLE_KR,roleStrength,roleTier,roleUncertainty,roleEvidence,teamPrediction} from './role-model.js';
 export const roleAllowed=(p,r)=>p.possible[r]&&!p.refusedRoles?.includes(r);
 export function evaluateMatch(assignA,assignB,players,model,teamMaskA){
  const roles=Object.fromEntries(ROLES.map((r,i)=>[r,{aId:players[assignA[i]].id,bId:players[assignB[i]].id}]));
@@ -19,7 +19,7 @@ export function prepareFixedRoles(players,fixedRoles={}){
   for(const side of ['A','B']){const id=value?.[side];if(!id)continue;const entry=byId.get(id);
    if(!entry)throw new Error('라인 고정 선수가 참가자에 없습니다. 참가자를 다시 선택하거나 고정을 해제해 주세요.');
    if(seen.has(id))throw new Error(`${entry.p.name} 선수를 두 자리에 고정할 수 없습니다.`);
-   if(!roleAllowed(entry.p,r))throw new Error(`${entry.p.name} 선수는 ${r} 배치 불가로 등록되어 있습니다. 가능·거부 역할을 수정하거나 고정을 해제해 주세요.`);
+   if(!roleAllowed(entry.p,r))throw new Error(`${entry.p.name} 선수는 ${ROLE_KR[r]}에 배정할 수 없습니다. 선수의 가능 역할이나 이번 편성의 거부라인을 확인하거나 고정을 해제해 주세요.`);
    seen.add(id);locks[side][ROLES.indexOf(r)]=entry.i;
   }
  }
