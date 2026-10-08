@@ -5,9 +5,6 @@ export class HttpError extends Error {constructor(status,message,data={}){super(
 export function normalizePlayer(p){
   if(!p||typeof p.id!=='string'||p.id.length>150||!p.id||typeof p.name!=='string'||!p.name.trim()||p.name.length>80||!Number.isFinite(p.baseTier)||p.baseTier<0||p.baseTier>10)throw new HttpError(422,'선수 이름과 기준 티어를 확인해 주세요.');
   if(!p.possible||!ROLES.some(r=>p.possible[r]===true)||ROLES.some(r=>typeof p.possible[r]!=='boolean'))throw new HttpError(422,'가능한 포지션을 하나 이상 선택해 주세요.');
-  for(const key of ['preferredRoles','refusedRoles'])if(p[key]!==undefined&&(!Array.isArray(p[key])||p[key].length>5||new Set(p[key]).size!==p[key].length||p[key].some(r=>!ROLES.includes(r))))throw new HttpError(422,'희망·거부 역할을 확인해 주세요.');
-  if((p.preferredRoles||[]).some(r=>!p.possible[r]||p.refusedRoles?.includes(r)))throw new HttpError(422,'같은 역할을 희망과 배치 제외로 동시에 설정할 수 없습니다.');
-  if(!ROLES.some(r=>p.possible[r]&&!p.refusedRoles?.includes(r)))throw new HttpError(422,'거부 역할을 제외하고 배치 가능한 역할이 하나 이상 필요합니다.');
   return {...p,rating:Number.isFinite(p.rating)?p.rating:0,roleRating:Object.fromEntries(ROLES.map(r=>[r,Number.isFinite(p.roleRating?.[r])?p.roleRating[r]:0])),stats:p.stats||{games:0,wins:0,losses:0,role:Object.fromEntries(ROLES.map(r=>[r,{games:0,better:0,even:0,worse:0}]))},timeline:Array.isArray(p.timeline)?p.timeline:[]};
 }
 export function validateDocument(value){
@@ -29,8 +26,8 @@ export function acceptChanges(current,incoming,role){
   if(incoming.history.length>current.history.length&&current.history.length&&current.model.algorithm!==RATING_VERSION)throw new HttpError(422,'계산 모델 업데이트 중입니다. 입력은 보존했습니다. 잠시 뒤 다시 저장해 주세요.');next.lastBackup=incoming.lastBackup??next.lastBackup;
   next.roster=incoming.roster.map(p=>{
     const old=oldRoster.get(p.id);
-    if(old)return normalizePlayer({...copy(old),name:p.name,baseTier:p.baseTier,possible:copy(p.possible),preferredRoles:copy(p.preferredRoles??old.preferredRoles??[]),refusedRoles:copy(p.refusedRoles??old.refusedRoles??[])});
-    return normalizePlayer({id:p.id,name:p.name,baseTier:p.baseTier,possible:copy(p.possible),preferredRoles:copy(p.preferredRoles??[]),refusedRoles:copy(p.refusedRoles??[])});
+    if(old)return {...copy(old),name:p.name,baseTier:p.baseTier,possible:copy(p.possible)};
+    return normalizePlayer({id:p.id,name:p.name,baseTier:p.baseTier,possible:copy(p.possible)});
   });
   for(const raw of incoming.history.filter(h=>!oldHistory.has(h.id))){
     const error=validateGameStats(raw.stats,raw.duration,true);if(error)throw new HttpError(422,error==='게임시간'?'게임 시간을 분:초로 입력해 주세요.':error);
