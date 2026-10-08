@@ -197,5 +197,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sa
 
 .round-preference-row{border-bottom:1px solid var(--border,#ddd);padding:12px 0}.round-preference-row summary{cursor:pointer;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.round-preference-row summary span{font-size:13px;color:var(--muted,#666)}.round-preference-fields{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}.round-preference-fields label{display:grid;gap:5px;font-size:13px}.round-preference-fields select{width:100%;min-width:0;padding:10px 5px}@media(max-width:520px){.round-preference-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+.history-lineup{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:12px;font-size:14px;line-height:1.5;color:var(--text)}
+.history-lineup th,.history-lineup td{text-align:left;vertical-align:top;padding:6px 4px;border-bottom:1px solid var(--line);overflow-wrap:anywhere;word-break:keep-all}
+.history-lineup th:first-child{width:58px;padding-left:0;color:var(--muted);font-weight:600}.history-lineup thead th{font-size:12px;font-weight:700}.history-lineup thead .history-winning-team{color:var(--gold)}.history-lineup tbody tr:last-child>*{border-bottom:0}
+
 /* Keep action labels readable when Korean copy wraps on small screens. */
 .round-preferences-section .section-head{flex-wrap:wrap;align-items:flex-start}.round-preferences-section .section-head>div{flex:1 1 250px}.round-preferences-section .section-head>.text-btn{flex:0 0 auto;white-space:nowrap}.section-head .text-btn,.roster-actions button{word-break:keep-all}.save-strip{flex-wrap:wrap}.save-strip [role="status"]{overflow-wrap:anywhere}
